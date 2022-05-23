@@ -1,0 +1,10 @@
+[[project]]
+name = "chwitter"
+img = "https://github.com/musikid/chwitter/raw/main/assets/logo.svg?raw=true"
+desc = """
+### Twitter, but it's lame.
+"""
+links = [
+	{name = "GitHub", url = "https://github.com/musikid/chwitter"},
+	{name = "Live instance", url = "https://musikid.github.io/chwitter"}
+]

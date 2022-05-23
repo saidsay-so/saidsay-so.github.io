@@ -1,0 +1,74 @@
+# The URL the site will be built for
+base_url = "https://musikid.github.io"
+title = "musikid"
+description = "A lazy developer's log"
+default_language = "en"
+theme = "serene"
+output_dir = "public"
+compile_sass = true
+minify_html = false
+build_search_index = false
+generate_feed = false
+feed_filename = "feed.xml"
+taxonomies = [{ name = "tags" }, { name = "categories" }]
+
+[markdown]
+highlight_code = true
+extra_syntaxes = []
+highlight_theme = "gruvbox-dark"
+render_emoji = true
+external_links_target_blank = false
+external_links_no_follow = true
+external_links_no_referrer = true
+smart_punctuation = false
+
+[slugify]
+paths = "on"
+taxonomies = "on"
+anchors = "on"
+
+[extra]
+name = "Sayafdine Said"
+id = "musikid"
+bio = "Student @ Sorbonne University"
+avatar = "https://github.com/musikid.png"
+
+show_id = true
+show_projects = true
+
+links = [
+  { name = "GitHub", icon = "ri-github-line", url = "https://github.com/musikid" },
+  { name = "LinkedIn", icon = "ri-linkedin-line", url = "https://www.linkedin.com/in/sayafdine-said" },
+  { name = "Email", icon = "ri-mail-send-line", url = "mailto:musikid@outlook.com" },
+]
+
+#============== Feed ===============================================
+feed_in_blog_section = true
+
+#============== Some feature switches ================================
+toc = true
+blur_effect = true
+back_to_top_button = true
+progress_bar = true
+# cc_license = false                                                                                                         # Whether to show Creative-Commons statement [Can be overridden by page config]
+# cc_license_statement = "This work is licensed under [CC BY-NC-SA 4.0](http://creativecommons.org/licenses/by-nc-sa/4.0/)." # The Creative-Commons statement
+outdate_warn = true
+outdate_warn_days = 365
+outdate_warn_text_before = "Note: This article was last updated "
+outdate_warn_text_after = " days ago and may be out of date."
+
+#============== Footer =============================================
+footer_copyright_name = "Sayafdine Said"
+footer_copyright_year = "2022"
+# footer_custom = "xxxxxxxx"
+footer_credits = true
+
+comment = "utterances"
+analytics = "none"
+
+[extra.cloudflare_web_analytics]
+token = "xxxxxxxx"
+
+[extra.utterances]
+repo = "musikid/musikid.github.io"
+theme = "preferred-color-scheme"
