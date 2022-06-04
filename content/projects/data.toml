@@ -3,8 +3,36 @@ name = "chwitter"
 img = "https://github.com/musikid/chwitter/raw/main/assets/logo.svg?raw=true"
 desc = """
 ### Twitter, but it's lame.
+
+A website similar to Twitter, with fewer functionalities.
+The implemented features are messages liking, search function, friends management, light/dark mode, messages creation and profile editing.
 """
 links = [
 	{name = "GitHub", url = "https://github.com/musikid/chwitter"},
 	{name = "Live instance", url = "https://musikid.github.io/chwitter"}
+]
+
+[[project]]
+name = "Wirecheap"
+img = ""
+desc = """
+### Wireshark, but it's cheaper (and less good).
+
+Ethernet frame analyzer written for a school project. Recognizes DNS, DHCP, UDP and Ethernet protocols.
+"""
+links = [
+	{name = "GitHub", url = "https://github.com/musikid/wirecheap"},
+]
+
+[[project]]
+name = "Fancy"
+img = "https://github.com/musikid/fancy/blob/develop/assets/logo.svg?raw=true"
+desc = """
+### Control your laptop fans with a fancy software.
+
+Fancy is a software which allows controlling laptop fans. It includes a service daemon to allow accessing to the EC and controlling it through D-Bus, a CLI to send commands and a GUI (WIP).
+"""
+links = [
+	{name = "GitHub", url = "https://github.com/musikid/fancy"},
+	{name = "Book", url = "https://musikid.github.io/fancy"}
 ]
