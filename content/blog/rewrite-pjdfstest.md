@@ -62,14 +62,16 @@ They are made up of assertions,
 using `expect` bash function, which calls the `pjdfstest` binary. 
 The binary then executes the syscall and send its result back to the `expect` function,
 which compares the expected and actual outputs,
-and fail/succeed when it has to.
+and fail when it has to.
+
+<!--
 
 #### Test case
 
 The typical shape of a test case is:
 
 - Description
-- Including `misc.sh`
+- Include of `misc.sh`
 - Check for feature support
 - TAP plan for the case
 - Randomly generated names
@@ -115,7 +117,18 @@ for type in regular dir fifo block char socket symlink; do
 	fi
 ```
 
+-->
+
 ### Limitations
+
+Several limitations arise from those points.
+First, since the test suite relies on TAP, 
+a lot of assertions are written in a single file.
+Some files have more than 1000 assertions, making debugging them difficult.
+
+Talking of debuggability, the fact that it's written in shell makes it easier to write tests, 
+but incredibly hard to debug and review, 
+given the lack of a good shell debugger and isolation between the assertions.
 
 ## Rewrite it in Rust
 
