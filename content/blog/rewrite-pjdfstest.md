@@ -159,7 +159,7 @@ For example:
 #### Layout
 
 ```
-chmod (syscall)
+chmod (syscall folder)
 ├── mod.rs (declarations)
 └── permission.rs (a test case)
 ```
@@ -204,7 +204,8 @@ fn test_ctime(ctx: &mut TestContext) -> TestResult {
 pjdfs_test_case!(permission, { test: test_ctime });
 ```
 
-Now, the assertions are grouped inside a function, which provides an isolation to eventually filter tests or running those in parallel.
+Now, the assertions are grouped inside a test function,
+which provides an isolation to eventually filter tests or running those in parallel.
 Also, thanks to `TestContext`, the created files are automatically removed after the test finishes.
 
 ### Debug
