@@ -10,9 +10,9 @@ tags = ["gsoc", "gsoc2022", "pjdfstest", "rust"]
 [extra]
 lang = "en"
 toc = true
-show_comment = true
+show_comment = false
 math = false
-mermaid = true
+mermaid = false
 +++
 
 GSoC official coding period has started the previous week.
