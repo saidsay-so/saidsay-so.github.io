@@ -77,7 +77,7 @@ The typical shape of a test case is:
 
 Example (`tests/chflags/11.t`):
 
-```sh
+```bash
 #!/bin/sh
 # vim: filetype=sh noexpandtab ts=8 sw=8
 # $FreeBSD: head/tools/regression/pjdfstest/tests/chflags/11.t 211352 2010-08-15 21:24:17Z pjd $
@@ -131,7 +131,7 @@ for type in regular dir fifo block char socket symlink; do
 
 This architecture has its advantages, but several limitations also arise from those points.
 
-First, since the test suite relies on TAP,
+Since the test suite relies on TAP,
 a lot of assertions are written in a single file.
 The report is also fairly limited because of the protocol.
 And with files that have more than 1000 assertions, debugging become difficult.
@@ -153,7 +153,7 @@ With this rewrite, we aim to solve those limitations.
 Test cases are grouped by syscalls.
 Each syscall folder then have a `mod.rs` file, 
 which contains declarations of the test cases inside this folder,
-and a `pjdfs_group!` statement to export those.
+and a `pjdfs_group!` statement to export them.
 For example:
 
 #### Layout
@@ -187,7 +187,7 @@ use crate::{
 // chmod/00.t:L58
 fn test_ctime(ctx: &mut TestContext) -> TestResult {
   for f_type in FileType::iter().filter(|&ft| ft == FileType::Symlink) {
-      let path = ctx.create(f_type).map_err(TestError::CreateFile)?;
+      let path = ctx.create(f_type)?;
       let ctime_before = stat(&path)?.st_ctime;
 
       sleep(Duration::from_secs(1));
@@ -205,13 +205,14 @@ pjdfs_test_case!(permission, { test: test_ctime });
 ```
 
 Now, the assertions are grouped inside a test function,
-which provides an isolation to eventually filter tests or running those in parallel.
-Also, thanks to `TestContext`, the created files are automatically removed after the test finishes.
+which allows to filter tests.
+It also improve reporting now that assertions are in test functions with meaningful names (instead of a number), 
+and may open the possibility to run them in parallel.
 
 ### Debug
 
 Because the rewrite is in Rust, standard debuggers (in particular `lldb`) can be used.
-It will also be easier to trace syscalls with `strace`.
+It will also be easier to trace syscalls with `strace`, now that a single test function can be executed.
 
 ### Performance
 
@@ -221,7 +222,7 @@ From a non-accurate benchmark that I did over the `chmod/00.t` test case,
 the results look encouraging.
 While the original took 13s, the rewrite took 1 second less, 
 and this time is essentially spent on `sleep` calls!
-It could greatly be improved by adding parallelization (and support for splitting tests over file types in this particular case).
+It could greatly be improved by adding parallelization (and by splitting test functions per file type in this particular case).
 
 Benchmark command:
 ```sh
@@ -243,4 +244,5 @@ Summary
 
 ## Thanks
 
-Many thanks to my mentor [Alan Somers](https://github.com/asomers), who will guide me through this journey (and is coincidentally one of nix's maintainers!).
+Many thanks to my mentor [Alan Somers](https://github.com/asomers), for accepting my proposal, 
+and guiding me through this journey (and is coincidentally one of nix's maintainers)!
