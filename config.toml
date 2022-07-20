@@ -35,6 +35,7 @@ avatar = "https://github.com/musikid.png"
 
 show_id = true
 show_projects = true
+show_resume = false
 
 links = [
   { name = "GitHub", icon = "ri-github-line", url = "https://github.com/musikid" },
