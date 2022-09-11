@@ -9,7 +9,7 @@ tags = ["gsoc", "gsoc2022", "pjdfstest", "rust"]
 
 [extra]
 lang = "en"
-toc = true
+toc = false
 show_comment = true
 math = false
 mermaid = true
@@ -31,7 +31,7 @@ its current shortcomings and how rewriting it in Rust has solved them.
 
 These introductory words are to thank my mentor [Alan Somers](https://github.com/asomers),
 for accepting the proposal, helping and guiding me through this journey!
-His high availability despite his other obligations really helped me to do this project!
+His high availability despite his other obligations helped me a lot to do this project!
 
 ## Code
 
@@ -80,12 +80,6 @@ an error string when a syscall fails, or simply 0 when all went well.
 For example, to `unlink` a file: `./pjdfstest unlink path` which should return 0 if the file
 has been successfully deleted, or `ENOENT` for example if it doesn't exist.
 
-{% mermaid() %}
-flowchart LR
-PR{"TAP harness\n prove"} === TC{"Test case\n truncate/00.t"} --- E["Assertion\n expect 0 truncate path 1234567"] 
-<==> PJD{pjdfstest binary} <==> S[/"Syscall\n truncate(&quot;path&quot;, 1234567)"/]
-{% end %}
-
 
 ### Test case
 
@@ -103,7 +97,9 @@ The typical shape of a test case is:
 - TAP plan
 - Assertions
 
-Example (`tests/chflags/11.t`):
+Example:
+
+##### tests/chflags/11.t
 
 ```bash
 #!/bin/sh
@@ -155,13 +151,21 @@ for type in regular dir fifo block char socket symlink; do
 	fi
 ```
 
+##### Architecture's chart
+
+{% mermaid() %}
+flowchart LR
+PR{"TAP harness\n prove"} === TC{"Test case\n truncate/00.t"} --- E["Assertion\n expect 0 truncate path 1234567"] 
+<==> PJD{pjdfstest binary} <==> S[/"Syscall\n truncate(&quot;path&quot;, 1234567)"/]
+{% end %}
+
+
 ## Limitations
 
 This architecture has its advantages, 
 like easier reading for the tests or quick modifications,
 but several limitations also arise from it.
 
- <!-- * Cannot be run as an unprivileged user. -->
  <!-- * No ATF integration.  This isn't critical, but it sure would be nice if pjdfstest could display detailed results at https://ci.freebsd.org/job/FreeBSD-main-amd64-test/lastCompletedBuild/testReport/ . -->
 
 ### Configurability
@@ -172,7 +176,8 @@ To account this, the test suite has a concept of features.
 However, those were hard coded in the test suite
 and consequently could not be easily configured,
 like with a configuration file or the command-line.
-
+It also cannot be run as an unprivileged user because it assumes that the current user
+is the super-user and doesn't make distinction between the parts requiring privileges.
 ### Isolation
 
 A lot of assertions are written in a single file.
@@ -205,7 +210,7 @@ factored out.
 ### TAP plan
 
 Each time a file is modified, its TAP plan needs to be recomputed.
-I don't think that I really need further elaboration...
+I don't think that needs further elaboration...
 
 ### Performance
 
@@ -231,10 +236,14 @@ we want to write a Rust binary, which:
 
 - is self-contained (embed all the tests),
 - can execute the tests (with the test runner),
-- can filter them according to configuration and conditions.
+- can filter them according to configuration and conditions,
 
-Another goal is being able to run the test suite on FreeBSD's CI infrastructure
-and get better reports with ATF metadata support.
+and not in the GSoC scope but good to have:
+
+- run tests in parallel,
+- get better reports on FreeBSD's CI infrastructure with
+  [ATF](https://www.freebsd.org/cgi/man.cgi?query=atf&apropos=0&sektion=0&manpath=FreeBSD+13.1-RELEASE+and+Ports&arch=default&format=html)
+  metadata support.
 
 ### Test collection
 
@@ -244,30 +253,115 @@ on existing approaches.
 Since the result should be a binary, techniques related to `cargo test` were excluded.
 We wanted to go first with the standard Rust `#[test]` attribute to collect the functions,
 but the API is not public.
-An experimental [implementation](https://github.com/rust-lang/rust/issues/50297)
+
+{% tip() %}
+[Cargo](https://github.com/rust-lang/cargo) is the Rust package manager.
+This isn't its sole task, it can also launch unit tests, which are functions
+annotated with the `#[test]` attribute.
+{% end %}
+
+An experimental public [implementation](https://github.com/rust-lang/rust/issues/50297)
 is available on the Nightly channel,
-but relying on Nightly for a test suite was quite ironic,
-in addition of limiting the.
-So, instead, we implemented an approach similar to Criterion's one,
+but relying on Nightly for a test suite was quite ironic
+and making harder to build it.
+Instead, we initially implemented an approach 
+similar to [Criterion](https://github.com/bheisler/criterion.rs)'s one,
 where a test group (`criterion_group!`) is declared with the test
 cases. However, it introduced a lot of boilerplate, 
 and we finally decided to use the [`inventory`](https://github.com/dtolnay/inventory)
 crate.
+
 With it, we can collect the tests without having to declare a test group.
 A test can now be declared with the `crate::test_case!` macro,
-which collects a description while allowing parameterization of the test,
-to require preconditions or features, or over file types.
+which collects the test function name with 
+a description (which is displayed to the user),
+while allowing parameterization of the test
+(to require preconditions or features, iterate over file types, 
+specify that the test shouldn't be run in parallel, etc.).
+
+For example:
+
+##### tests/chmod.rs
+
+```rust
+crate::test_case! {
+    /// chmod does not update ctime when it fails
+    failed_chmod_unchanged_ctime, serialized, root => [Regular, Dir, Fifo, Block, Char, Socket]
+}
+fn failed_chmod_unchanged_ctime(ctx: &mut SerializedTestContext, f_type: FileType) {
+    ...
+}
+```
+
+{% info() %}
+Here, the test will not be executed in a parallel context (`serialized`),
+require privileges (`root`) and will be executed over the `Regular`, `Dir`, `Fifo`, `Block`, `Char`
+and `Socket` file types.
+{% end %}
 
 ### Writing tests
 
 We now know how to collect the tests, but we still have to write them!
-Again, we investigated on the interface which could fit better here.
-We already knew that we wanted to write them like how
-Rust unit tests usually are.
-This means using the standard assertion macros (`assert!`/`assert_eq!`/`assert_ne!`)
-and `unwrap`ing `Result`s.
-That also means that the test functions would panic when something goes wrong.
+Again, we investigated on how to do it best.
+We wanted to write them like how Rust unit tests usually are.
+This means using the standard assertion macros 
+(`assert!`/`assert_eq!`/`assert_ne!`) and `unwrap`ing `Result`s.
 
+##### Unit test example (from [Rust by example](https://doc.rust-lang.org/rust-by-example/testing/unit_testing.html))
+
+```rust
+pub fn add(a: i32, b: i32) -> i32 {
+    a + b
+}
+
+// This is a really bad adding function, its purpose is to fail in this
+// example.
+#[allow(dead_code)]
+fn bad_add(a: i32, b: i32) -> i32 {
+    a - b
+}
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    #[test]
+    fn test_add() {
+        assert_eq!(add(1, 2), 3);
+    }
+
+    #[test]
+    fn test_bad_add() {
+        // This assert would fire and test will fail.
+        // Please note, that private functions can be tested too!
+        assert_eq!(bad_add(1, 2), 3);
+    }
+}
+```
+
+This implies that the test functions will panic if something goes wrong.
+That's usually not a problem because the unit tests are compiled as individual binaries,
+so when one test panics, it doesn't stop others from running.
+But, in our case, the tests are handled by a unique runner.
+We don't want to stop running all the tests when one fails!
+This can be solved, by catching the panic
+with the help of [`std::panic::catch_unwind`](https://doc.rust-lang.org/std/panic/fn.catch_unwind.html).
+
+Now that we know how to write tests, we can start, right?
+Well, we can if we don't want isolation between tests
+(and future support for parallelization).
+For example, almost all tests need to create files.
+If we don't care about isolation, we could just create them
+in the current directory and call it a day.
+But that wouldn't work well in a parallel context,
+therefore we need to isolate the tests' context from each other.
+We accomplish this by creating a separate directory for each test function,
+and with the `TestContext` struct,
+which wraps the methods to create files inside the said directory
+and automatically cleanup, among other things.
+
+##### tests/truncate.rs
 
 ```rust
 crate::test_case! {
@@ -290,48 +384,129 @@ fn extend_file_shrink_sparse(ctx: &mut TestContext) {
 }
 ```
 
+That would be sufficient, if we don't consider that some tests 
+require functions which can affect the entire process,
+like [changing effective user](https://www.man7.org/linux/man-pages/man7/credentials.7.html) 
+or switching [umask](https://man7.org/linux/man-pages/man2/umask.2.html).
+We need to accommodate these cases if we want the runner to be able to run the tests
+in parallel in the future, hence the previously mentioned `serialized` keyword.
+It allows to annotate that a test case should be the only one running
+and provide functions which should be used only in this context.
+
+##### tests/chmod.rs
+
+{% info() %}
+The function `SerializedTestContext::as_user` allows to change
+the effective user in a controlled manner.
+{% end %}
+
+```rust
+crate::test_case! {
+    /// S_ISGID bit shall be cleared upon successful return from chmod of a regular file
+    /// if the calling process does not have appropriate privileges, and if
+    /// the group ID of the file does not match the effective group ID or one of the
+    /// supplementary group IDs
+    clear_isgid_bit, serialized, root
+}
+fn clear_isgid_bit(ctx: &mut SerializedTestContext) {
+    let path = ctx.create(FileType::Regular).unwrap();
+    chmod(&path, Mode::from_bits_truncate(0o0755)).unwrap();
+
+    // Get a dummy user from context
+    let user = ctx.get_new_user();
+
+    chown(&path, Some(user.uid), Some(user.gid)).unwrap();
+
+    let expected_mode = Mode::from_bits_truncate(0o2755);
+    // Change user
+    ctx.as_user(&user, None, || {
+        chmod(&path, expected_mode).unwrap();
+    });
+
+    ...
+}
+```
+
+With all this and a few other methods we rewrote the test suite
+while solving the isolation problem.
+
+### Progress status
+
+At the time of writing, the test suite has been (almost...) completely rewritten!
+The original test suite had more than 7400 lines split between 225 files.
+This rewrite includes more than 92% of the original test suite, the exception being
+the granular tests.
+We judged that it would take too much time to rewrite all of them accurately,
+especially because NFSv4 ACLs are really complicated (and there is no written
+standard to check the expected behavior, we have to rely on the implementations).
+
+### What's new?
+
 Now, the assertions are grouped inside a test function,
 which allows filtering tests with improved granularity.
-It also improves reporting, now that assertions are in test functions with meaningful names (instead of a number), 
-and open the possibility to run them in parallel.
+It also improves reporting,
+now that assertions are in test functions with meaningful names
+and descriptions.
+The test suite also support being configured with a configuration file,
+to specify what are the supported features or
+the minimum sleep time for file system to takes changes into account for example.
 
-### Debug
+#### Debug
 
 Because the rewrite is in Rust, standard debuggers (in particular `lldb`) can be used.
 It is also easier to trace syscalls with `strace`,
 now that a single test function can be executed.
 
-### Performance
+#### Performance
+#### TL;DR 15x faster and more to expect with parallelization!
 
-#### TL;DR 10% faster and more to expect with parallelization!
+This is probably the most exciting part and Rust doesn't disappoint on this one!
 
-From a non-accurate benchmark that I did over the `chmod/00.t` test case,
-the results look encouraging.
-While the original took 13s, the rewrite took 1 second less, 
-and this time is essentially spent on `sleep` calls!
-It could be greatly improved by adding parallelization (and by splitting test functions per file type in this particular case).
-
-Benchmark command:
+Benchmark commands:
 ```sh
-[root@meow rust]# hyperfine "./target/debug/pjdfs_runner" "prove -q ../tests/chmod/00.t"
-Benchmark 1: ./target/debug/pjdfs_runner
-  Time (mean ± σ):     12.009 s ±  0.008 s    [User: 0.003 s, System: 0.002 s]
-  Range (min … max):   12.005 s … 12.032 s    10 runs
- 
-  Warning: Statistical outliers were detected. Consider re-running this benchmark on a quiet PC without any interferences from other programs. It might help to use the '--warmup' or '--prepare' options.
- 
-Benchmark 2: prove -q ../tests/chmod/00.t
-  Time (mean ± σ):     13.167 s ±  0.035 s    [User: 0.792 s, System: 0.507 s]
-  Range (min … max):   13.121 s … 13.239 s    10 runs
- 
+> sudo hyperfine -i './target/release/pjdfstest -c pjdfstest.toml >/dev/null' 'prove -rvj8 ../tests >/dev/null'
+
+Benchmark 1: ./target/release/pjdfstest -c pjdfstest.toml >/dev/null
+  Time (mean ± σ):      1.338 s ±  0.202 s    [User: 0.002 s, System: 0.027 s]
+  Range (min … max):    1.136 s …  1.768 s    10 runs
+
+  Warning: Ignoring non-zero exit code.
+
+Benchmark 2: prove -rvj8 ../tests >/dev/null
+  Time (mean ± σ):     138.946 s ±  2.419 s    [User: 2.947 s, System: 9.995 s]
+  Range (min … max):   136.582 s … 143.314 s    10 runs
+
+  Warning: Ignoring non-zero exit code.
+
+With 1 second sleeps:
+
+> sudo hyperfine -ir5 './target/release/pjdfstest -c pjdfstest.toml >/dev/null' 'prove -rvj8 ../tests >/dev/null'
+
 Summary
-  './target/debug/pjdfs_runner' ran
-    1.10 ± 0.00 times faster than 'prove -q ../tests/chmod/00.t'
+  './target/release/pjdfstest -c pjdfstest.toml >/dev/null' ran
+  103.82 ± 15.81 times faster than 'prove -rvj8 ../tests >/dev/null'
+
+Benchmark 1: ./target/release/pjdfstest -c pjdfstest.toml >/dev/null
+  Time (mean ± σ):     88.563 s ±  0.265 s    [User: 0.003 s, System: 0.025 s]
+  Range (min … max):   88.322 s … 88.946 s    5 runs
+
+  Warning: Ignoring non-zero exit code.
+
+Benchmark 2: prove -rvj8 ../tests >/dev/null
+  Time (mean ± σ):     138.636 s ±  2.822 s    [User: 2.779 s, System: 9.532 s]
+  Range (min … max):   136.659 s … 143.455 s    5 runs
+
+  Warning: Ignoring non-zero exit code.
+
+Summary
+  './target/release/pjdfstest -c pjdfstest.toml >/dev/null' ran
+    1.57 ± 0.03 times faster than 'prove -rvj8 ../tests >/dev/null'
+
 ```
 
-## Looking forward
+<!-- ## Looking forward
 
-### Progress status
+Now that 
 
 ### ATF support
 
@@ -341,4 +516,4 @@ Summary
 
 ### Command-line improvements
 
-file types filter, syscall filter
+file types filter, syscall filter -->
