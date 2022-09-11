@@ -7,4 +7,4 @@ lang = "en"
 
 Hi, I'm Sayafdine!
 
-Student at Sorbonne University, open source contributor and GSoC'22 intern at FreeBSD.
+Student at Sorbonne University, DevOps Cloud developer at Société Générale and open source contributor.
