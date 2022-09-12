@@ -559,7 +559,7 @@ Result: PASS
 ```
 
 #### Performance
-#### TL;DR 15x faster and more to expect with parallelization!
+#### TL;DR 100x faster and more to expect with parallelization!
 
 This is probably the most exciting part and Rust doesn't disappoint on this one!
 With the improved configurability, it's now possible to manually specify a time
@@ -569,15 +569,16 @@ This greatly improves the speed, but this isn't the only slowness factor.
 | Test suite | Time |
 |------------|------|
 | Original test suite (prove) | 350s |
-| Original test suite (8 jobs) | 139s |
+| Original test suite (prove - 8 jobs) | 139s |
 | Rewrite with 1s sleep time | 88s |
 | Rewrite with 1ms sleep time | 1s |
 
-Tested on a laptop (I know...), with the ZFS file system.
-The original test suite is executed with the `prove` TAP harness.
+> Tested on a laptop, with the ZFS file system.
+> The original test suite is executed with the `prove` TAP harness.
 
-From these non-rigorous benchmarks, we can see that there an important speed gap
+From these non-rigorous benchmarks, we can see that there is an important speed gap
 between the original test suite and its rewrite.
+With reduced sleep time, the rewrite can execute the entire test suite in only one second.
 Even with 1-second sleeps, the rewrite is still greatly faster than the original!
 
 Benchmark commands:
