@@ -1,7 +1,7 @@
 +++
 title = "Oxidizing FreeBSD's file system test suite"
 date = 2022-09-12
-draft = true
+draft = false
 
 [taxonomies]
 categories = ["GSoC 2022"]
@@ -173,11 +173,11 @@ but several limitations also arise from it.
 Some features (like `chflags(2)`) aren't systematically implemented on file systems,
 often because they aren't part of the POSIX specification.
 To account this, the test suite has a concept of features.
-However, those were hard coded in the test suite
-and consequently could not be easily configured,
+However, the supported configurations were hard coded 
+in the test suite and consequently couldn't be easily configured,
 like with a configuration file or the command-line.
 It also cannot be run as an unprivileged user because it assumes that the current user
-is the super-user and doesn't make distinction between the parts requiring privileges.
+is the super-user and doesn't make distinction with the parts requiring privileges.
 ### Isolation
 
 A lot of assertions are written in a single file.
@@ -196,7 +196,7 @@ Also, writing tests in shell script made them easy to read
 and quick to modify,
 but paradoxically harder to debug, because there's no sh debugger.
 The TAP-based approach doesn't help because the number used to validate
-an assertion is disconnected from any context.
+an assertion is lacks context.
 
 ### Duplication
 
@@ -267,10 +267,78 @@ and making harder to build it.
 Instead, we initially implemented an approach 
 similar to [Criterion](https://github.com/bheisler/criterion.rs)'s one,
 where a test group (`criterion_group!`) is declared with the test
-cases. However, it introduced a lot of boilerplate, 
+cases. 
+
+##### Criterion example
+
+```rust
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
+
+fn fibonacci(n: u64) -> u64 {
+    match n {
+        0 => 1,
+        1 => 1,
+        n => fibonacci(n-1) + fibonacci(n-2),
+    }
+}
+
+fn criterion_benchmark(c: &mut Criterion) {
+    c.bench_function("fib 20", |b| b.iter(|| fibonacci(black_box(20))));
+}
+
+criterion_group!(benches, criterion_benchmark);
+criterion_main!(benches);
+```
+
+##### Initial implementation
+
+###### main.rs
+
+```rust
+fn main() -> anyhow::Result<()> {    
+    for group in [chmod::tests] {
+      ...
+    }
+
+    Ok(())
+}
+
+```
+
+###### chmod.rs
+
+```rust
+pjdfs_test_case!(
+    permission,
+    { test: test_ctime, require_root: true },
+    { test: test_change_perm, require_root: true },
+    { test: test_failed_chmod_unchanged_ctime, require_root: true },
+    { test: test_clear_isgid_bit }
+);
+
+...
+
+// chmod/00.t:L58
+fn test_ctime(ctx: &mut TestContext) {
+    for f_type in FileType::iter().filter(|ft| *ft != FileType::Symlink(None)) {
+        let path = ctx.create(f_type).unwrap();
+        let ctime_before = stat(&path).unwrap().st_ctime;
+
+        sleep(Duration::from_secs(1));
+
+        chmod(&path, Mode::from_bits_truncate(0o111)).unwrap();
+
+        let ctime_after = stat(&path).unwrap().st_ctime;
+        assert!(ctime_after > ctime_before);
+    }
+}
+
+...
+```
+
+However, it introduced a lot of boilerplate, 
 and we finally decided to use the [`inventory`](https://github.com/dtolnay/inventory)
 crate.
-
 With it, we can collect the tests without having to declare a test group.
 A test can now be declared with the `crate::test_case!` macro,
 which collects the test function name with 
@@ -427,40 +495,90 @@ fn clear_isgid_bit(ctx: &mut SerializedTestContext) {
 }
 ```
 
-With all this and a few other methods we rewrote the test suite
-while solving the isolation problem.
+With all this and a few other methods, we rewrote the test suite
+while solving the previous limitations.
 
 ### Progress status
 
-At the time of writing, the test suite has been (almost...) completely rewritten!
+At the time of writing, the test suite has been completely rewritten!
 The original test suite had more than 7400 lines split between 225 files.
 This rewrite includes more than 92% of the original test suite, the exception being
 the granular tests.
 We judged that it would take too much time to rewrite all of them accurately,
-especially because NFSv4 ACLs are really complicated (and there is no written
-standard to check the expected behavior, we have to rely on the implementations).
+especially because NFSv4 ACLs are really complicated (there is no written
+standard to check the expected behavior, we have to rely on the implementations)
+and the tests are actually incomplete.
+Some tests still need to be merged
+and we're refactoring the error tests,
+but most of the work is done.
 
 ### What's new?
+
+#### Isolation
 
 Now, the assertions are grouped inside a test function,
 which allows filtering tests with improved granularity.
 It also improves reporting,
 now that assertions are in test functions with meaningful names
 and descriptions.
-The test suite also support being configured with a configuration file,
-to specify what are the supported features or
-the minimum sleep time for file system to takes changes into account for example.
 
-#### Debug
+Run example:
 
-Because the rewrite is in Rust, standard debuggers (in particular `lldb`) can be used.
-It is also easier to trace syscalls with `strace`,
-now that a single test function can be executed.
+```sh
+> pjdfstest -c pjdfstest.toml chmod
+
+pjdfstest::tests::chmod::failed_chmod_unchanged_ctime::socket	
+	 chmod does not update ctime when it fails		success
+pjdfstest::tests::chmod::failed_chmod_unchanged_ctime::char	
+	 chmod does not update ctime when it fails		success
+pjdfstest::tests::chmod::failed_chmod_unchanged_ctime::block	
+
+...
+
+Tests: 0 failed, 0 skipped, 26 passed, 26 total
+```
+
+Which is clearer than:
+
+```sh
+> prove -v tests/rename/00.t
+../tests/rename/00.t .. 
+1..122
+ok 1
+ok 2
+ok 3
+ok 4
+ok 5
+ok 6
+ok 7
+...
+ok
+All tests successful.
+Files=1, Tests=122,  8 wallclock secs ( 0.04 usr  0.01 sys +  0.65 cusr  0.41 csys =  1.11 CPU)
+Result: PASS
+```
 
 #### Performance
 #### TL;DR 15x faster and more to expect with parallelization!
 
 This is probably the most exciting part and Rust doesn't disappoint on this one!
+With the improved configurability, it's now possible to manually specify a time
+for the sleeps, which depends on the timestamp granularity of the tested file system. 
+This greatly improves the speed, but this isn't the only slowness factor.
+
+| Test suite | Time |
+|------------|------|
+| Original test suite (prove) | 350s |
+| Original test suite (8 jobs) | 139s |
+| Rewrite with 1s sleep time | 88s |
+| Rewrite with 1ms sleep time | 1s |
+
+Tested on a laptop (I know...), with the ZFS file system.
+The original test suite is executed with the `prove` TAP harness.
+
+From these non-rigorous benchmarks, we can see that there an important speed gap
+between the original test suite and its rewrite.
+Even with 1-second sleeps, the rewrite is still greatly faster than the original!
 
 Benchmark commands:
 ```sh
@@ -478,13 +596,13 @@ Benchmark 2: prove -rvj8 ../tests >/dev/null
 
   Warning: Ignoring non-zero exit code.
 
-With 1 second sleeps:
-
-> sudo hyperfine -ir5 './target/release/pjdfstest -c pjdfstest.toml >/dev/null' 'prove -rvj8 ../tests >/dev/null'
-
 Summary
   './target/release/pjdfstest -c pjdfstest.toml >/dev/null' ran
   103.82 ± 15.81 times faster than 'prove -rvj8 ../tests >/dev/null'
+
+With 1 second sleeps:
+
+> sudo hyperfine -ir5 './target/release/pjdfstest -c pjdfstest.toml >/dev/null' 'prove -rvj8 ../tests >/dev/null'
 
 Benchmark 1: ./target/release/pjdfstest -c pjdfstest.toml >/dev/null
   Time (mean ± σ):     88.563 s ±  0.265 s    [User: 0.003 s, System: 0.025 s]
@@ -504,9 +622,21 @@ Summary
 
 ```
 
+#### Configurability
+
+The test suite can optionally be configured with a configuration file,
+to specify what are the supported features or
+the minimum sleep time for file system to takes changes into account for example.
+
+#### Debugging
+
+Because the rewrite is in Rust, standard debuggers (in particular `lldb`) can be used.
+It is also easier to trace syscalls with `strace`,
+now that a single test function can be executed.
+
 <!-- ## Looking forward
 
-Now that 
+Now that the 
 
 ### ATF support
 
