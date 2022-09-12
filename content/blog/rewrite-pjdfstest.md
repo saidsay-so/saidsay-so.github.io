@@ -31,7 +31,7 @@ its current shortcomings and how rewriting it in Rust has solved them.
 
 These introductory words are to thank my mentor [Alan Somers](https://github.com/asomers),
 for accepting the proposal, helping and guiding me through this journey!
-His high availability despite his other obligations helped me a lot to do this project!
+His high availability helped me a lot to do this project!
 
 ## Code
 
@@ -626,7 +626,7 @@ We judged that it would take too much time to rewrite all of them accurately,
 especially because NFSv4 ACLs are really complicated (there is no written
 standard to check the expected behavior, we have to rely on the implementations)
 and the tests are actually incomplete.
-Some tests still need to be merged,
+Otherwise, some tests still need to be merged,
 and we're refactoring the error tests,
 but the rewrite is already usable.
 
