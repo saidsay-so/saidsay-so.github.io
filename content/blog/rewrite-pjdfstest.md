@@ -55,8 +55,8 @@ which we are going to see more in detail in the next section.
 {% end %}
 
 {% info() %}
-Even if it's targeted towards POSIX syscalls,
-some non-standardized syscalls like `chflags(2)` are tested as well.
+Even if it's supposed to test POSIX syscalls,
+some non-standardized like `chflags(2)` are tested as well.
 {% end %}
 
 ### Architecture
@@ -79,7 +79,6 @@ whether that be a formatted one like for the `stat(2)` output,
 an error string when a syscall fails, or simply 0 when all went well.
 For example, to `unlink` a file: `./pjdfstest unlink path` which should return 0 if the file
 has been successfully deleted, or `ENOENT` for example if it doesn't exist.
-
 
 ### Test case
 
@@ -147,12 +146,18 @@ for type in regular dir fifo block char socket symlink; do
 	fi
 ```
 
+### Execution
+
+The test cases can be launched directly,
+but they need a TAP harness for the assertions to work.
+They are usually executed through the `prove` harness,
+which is commonly included with `perl`.
 ##### Architecture's chart
 
 {% mermaid() %}
 flowchart LR
-PR{"TAP harness\n prove"} === TC{"Test case\n truncate/00.t"} --- E["Assertion\n expect 0 truncate path 1234567"] 
-<==> PJD{pjdfstest binary} <==> S[/"Syscall\n truncate(&quot;path&quot;, 1234567)"/]
+PR{"TAP harness\n prove"} === TC{"Test case\n chflags/11.t"} --- E["Assertion\n expect none stat ${n1} flags"] 
+<==> PJD{pjdfstest binary} <==> S[/"Syscall\n stat(n1).st_flags"/]
 {% end %}
 
 
@@ -559,8 +564,8 @@ This greatly improves the speed, but this isn't the only slowness factor.
 
 From these non-rigorous benchmarks, we can see that there is an important speed gap
 between the original test suite and its rewrite.
-With reduced sleep time, the rewrite can execute the entire test suite in only one second.
-Even with 1-second sleeps, the rewrite is still greatly faster than the original!
+With reduced sleep time, the rewrite can execute the entire test suite in only one second!
+Even with 1-second sleeps, the rewrite is still faster than the original!
 
 Benchmark commands:
 ```sh
