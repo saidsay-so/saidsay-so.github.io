@@ -9,7 +9,7 @@ tags = ["gsoc", "gsoc2022", "pjdfstest", "rust"]
 
 [extra]
 lang = "en"
-toc = false
+toc = true
 show_comment = true
 math = false
 mermaid = true
@@ -102,10 +102,6 @@ Example:
 ##### tests/chflags/11.t
 
 ```bash
-#!/bin/sh
-# vim: filetype=sh noexpandtab ts=8 sw=8
-# $FreeBSD: head/tools/regression/pjdfstest/tests/chflags/11.t 211352 2010-08-15 21:24:17Z pjd $
-
 # Description
 
 desc="chflags returns EPERM if a user tries to set or remove the SF_SNAPSHOT flag"
@@ -305,7 +301,17 @@ fn main() -> anyhow::Result<()> {
 
 ```
 
-###### chmod.rs
+###### chmod/mod.rs
+
+```rust
+mod errno;
+mod lchmod;
+mod permission;
+
+crate::pjdfs_group!(chmod; permission::test_case, errno::test_case);
+```
+
+###### chmod/permission.rs
 
 ```rust
 pjdfs_test_case!(
@@ -317,27 +323,10 @@ pjdfs_test_case!(
 );
 
 ...
-
-// chmod/00.t:L58
-fn test_ctime(ctx: &mut TestContext) {
-    for f_type in FileType::iter().filter(|ft| *ft != FileType::Symlink(None)) {
-        let path = ctx.create(f_type).unwrap();
-        let ctime_before = stat(&path).unwrap().st_ctime;
-
-        sleep(Duration::from_secs(1));
-
-        chmod(&path, Mode::from_bits_truncate(0o111)).unwrap();
-
-        let ctime_after = stat(&path).unwrap().st_ctime;
-        assert!(ctime_after > ctime_before);
-    }
-}
-
-...
 ```
 
-However, it introduced a lot of boilerplate, 
-and we finally decided to use the [`inventory`](https://github.com/dtolnay/inventory)
+However, as we can see, it introduced a lot of boilerplate, 
+so we finally decided to use the [`inventory`](https://github.com/dtolnay/inventory)
 crate.
 With it, we can collect the tests without having to declare a test group.
 A test can now be declared with the `crate::test_case!` macro,
@@ -347,7 +336,13 @@ while allowing parameterization of the test
 (to require preconditions or features, iterate over file types, 
 specify that the test shouldn't be run in parallel, etc.).
 
-For example:
+##### main.rs
+
+```rust
+fn main() {
+    let tests = inventory::iter<TestCase>;
+}
+```
 
 ##### tests/chmod.rs
 
@@ -498,20 +493,6 @@ fn clear_isgid_bit(ctx: &mut SerializedTestContext) {
 With all this and a few other methods, we rewrote the test suite
 while solving the previous limitations.
 
-### Progress status
-
-At the time of writing, the test suite has been completely rewritten!
-The original test suite had more than 7400 lines split between 225 files.
-This rewrite includes more than 92% of the original test suite, the exception being
-the granular tests.
-We judged that it would take too much time to rewrite all of them accurately,
-especially because NFSv4 ACLs are really complicated (there is no written
-standard to check the expected behavior, we have to rely on the implementations)
-and the tests are actually incomplete.
-Some tests still need to be merged
-and we're refactoring the error tests,
-but most of the work is done.
-
 ### What's new?
 
 #### Isolation
@@ -573,7 +554,7 @@ This greatly improves the speed, but this isn't the only slowness factor.
 | Rewrite with 1s sleep time | 88s |
 | Rewrite with 1ms sleep time | 1s |
 
-> Tested on a laptop, with the ZFS file system.
+> Tested on a FreeBSD laptop with 8 cores, on the ZFS file system.
 > The original test suite is executed with the `prove` TAP harness.
 
 From these non-rigorous benchmarks, we can see that there is an important speed gap
@@ -635,9 +616,22 @@ Because the rewrite is in Rust, standard debuggers (in particular `lldb`) can be
 It is also easier to trace syscalls with `strace`,
 now that a single test function can be executed.
 
+### Progress status
+
+At the time of writing, the test suite has (almost) been completely rewritten!
+The original test suite had more than 7400 lines split between 225 files.
+This rewrite includes more than 92% of the original test suite, the exception being
+the granular tests.
+We judged that it would take too much time to rewrite all of them accurately,
+especially because NFSv4 ACLs are really complicated (there is no written
+standard to check the expected behavior, we have to rely on the implementations)
+and the tests are actually incomplete.
+Some tests still need to be merged,
+and we're refactoring the error tests,
+but the rewrite is already usable.
+
 <!-- ## Looking forward
 
-Now that the 
 
 ### ATF support
 
