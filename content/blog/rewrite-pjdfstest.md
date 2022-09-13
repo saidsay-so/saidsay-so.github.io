@@ -31,7 +31,7 @@ its current shortcomings and how rewriting it in Rust has solved them.
 
 These introductory words are to thank my mentor [Alan Somers](https://github.com/asomers),
 for accepting the proposal, helping and guiding me through this journey!
-His high availability helped me a lot to do this project!
+His high availability and his contributions helped me a lot to do this project!
 
 ## Code
 
@@ -132,18 +132,7 @@ for type in regular dir fifo block char socket symlink; do
 		expect EPERM -u 65534 -g 65534 chflags ${n1} SF_SNAPSHOT
 		expect none stat ${n1} flags
 		expect EPERM chflags ${n1} SF_SNAPSHOT
-		expect none stat ${n1} flags
-		expect 0 chown ${n1} 65534 65534
-		expect EPERM -u 65534 -g 65534 chflags ${n1} SF_SNAPSHOT
-		expect none stat ${n1} flags
-		expect EPERM chflags ${n1} SF_SNAPSHOT
-		expect none stat ${n1} flags
-		if [ "${type}" = "dir" ]; then
-			expect 0 rmdir ${n1}
-		else
-			expect 0 unlink ${n1}
-		fi
-	fi
+...
 ```
 
 ### Execution
@@ -164,7 +153,7 @@ PR{"TAP harness\n prove"} === TC{"Test case\n chflags/11.t"} --- E["Assertion\n 
 ## Limitations
 
 This architecture has its advantages, 
-like easier reading for the tests or quick modifications,
+like readable tests or quick modifications,
 but several limitations also arise from it.
 
  <!-- * No ATF integration.  This isn't critical, but it sure would be nice if pjdfstest could display detailed results at https://ci.freebsd.org/job/FreeBSD-main-amd64-test/lastCompletedBuild/testReport/ . -->
@@ -177,6 +166,7 @@ To account this, the test suite has a concept of features.
 However, the supported configurations were hard coded 
 in the test suite and consequently couldn't be easily configured,
 like with a configuration file or the command-line.
+
 It also cannot be run as an unprivileged user because it assumes that the current user
 is the super-user and doesn't make distinction with the parts requiring privileges.
 ### Isolation
@@ -197,7 +187,7 @@ Also, writing tests in shell script made them easy to read
 and quick to modify,
 but paradoxically harder to debug, because there's no sh debugger.
 The TAP-based approach doesn't help because the number used to validate
-an assertion is lacks context.
+an assertion lacks context.
 
 ### Duplication
 
@@ -218,11 +208,10 @@ I don't think that needs further elaboration...
 Performance is also one of the shortcomings.
 Because it's written in shell script, 
 which relies on external programs to execute most of its operations,
-it takes almost 5 minutes to complete the suite, when it could be way less.
-One of the reasons is that it runs all test cases sequentially, 
-when it's actually possible to run them independently 
-given that test files do not rely on each other. 
-It also contains many 1-second sleeps, which could be smaller 
+it takes almost 5 minutes (with one job) 
+to complete the suite, when it could be way less.
+One of the other reasons is that it contains many 1-second sleeps, 
+which could be smaller (depending on the file system timestamp granularity) 
 if it had better configurability.
 
 ## Rewrite it in Rust
@@ -345,7 +334,7 @@ specify that the test shouldn't be run in parallel, etc.).
 
 ```rust
 fn main() {
-    let tests = inventory::iter<TestCase>;
+    let tests = inventory::iter::<TestCase>;
 }
 ```
 
@@ -422,6 +411,7 @@ Well, we can if we don't want isolation between tests
 For example, almost all tests need to create files.
 If we don't care about isolation, we could just create them
 in the current directory and call it a day.
+
 But that wouldn't work well in a parallel context,
 therefore we need to isolate the tests' context from each other.
 We accomplish this by creating a separate directory for each test function,
@@ -480,7 +470,7 @@ fn clear_isgid_bit(ctx: &mut SerializedTestContext) {
     let path = ctx.create(FileType::Regular).unwrap();
     chmod(&path, Mode::from_bits_truncate(0o0755)).unwrap();
 
-    // Get a dummy user from context
+    // Get a dummy user
     let user = ctx.get_new_user();
 
     chown(&path, Some(user.uid), Some(user.gid)).unwrap();
@@ -495,6 +485,7 @@ fn clear_isgid_bit(ctx: &mut SerializedTestContext) {
 }
 ```
 
+Thanks to the `nix` crate, we were able to use syscalls in Rust.
 With all this and a few other methods, we rewrote the test suite
 while solving the previous limitations.
 
@@ -511,7 +502,7 @@ and descriptions.
 Run example:
 
 ```sh
-> pjdfstest -c pjdfstest.toml chmod
+> pjdfstest -vc pjdfstest.toml chmod
 
 pjdfstest::tests::chmod::failed_chmod_unchanged_ctime::socket	
 	 chmod does not update ctime when it fails		success
@@ -554,18 +545,76 @@ This greatly improves the speed, but this isn't the only slowness factor.
 
 | Test suite | Time |
 |------------|------|
-| Original test suite (prove) | 350s |
-| Original test suite (prove - 8 jobs) | 139s |
-| Rewrite with 1s sleep time | 88s |
-| Rewrite with 1ms sleep time | 1s |
+| Original | 350s |
+| Original (8 jobs) | 139s |
+| Rewrite (1s sleep time) | 89s |
+| Rewrite (1ms sleep time) | 1s |
 
 > Tested on a FreeBSD laptop with 8 cores, on the ZFS file system.
 > The original test suite is executed with the `prove` TAP harness.
 
 From these non-rigorous benchmarks, we can see that there is an important speed gap
 between the original test suite and its rewrite.
+
 With reduced sleep time, the rewrite can execute the entire test suite in only one second!
-Even with 1-second sleeps, the rewrite is still faster than the original!
+Even with 1-second sleeps, the rewrite is still faster than the original
+with 8 jobs running!
+
+The rewrite doesn't support running the tests in parallel yet, but it's something
+that will definitely improve the suite's speed even with long sleep time.
+
+#### Configurability
+
+The test suite can optionally be configured with a configuration file,
+to specify what are the supported features or
+the minimum sleep time for file system to takes changes into account for example.
+
+##### Configuration example
+
+```toml
+# Configuration for the pjdfstest runner
+
+# This section allows enabling file system specific features.
+# Please see the book for more details.
+# A list of these features is provided when executing the runner with `-l`.
+[features]
+# File flags can be specified for OS which supports them.
+# file_flags = ["UF_IMMUTABLE"]
+
+# Might use the key notation as well.
+[features.posix_fallocate]
+
+[settings]
+# naptime is the duration of various short sleeps.  It should be greater than
+# the timestamp granularity of the file system under test.
+naptime = 0.001
+```
+
+As for the root privileges, the test suite doesn't run tests which requires
+them if the user doesn't have the rights.
+
+#### Debugging
+
+Because the rewrite is in Rust, standard debuggers 
+(in particular `rust-lldb`) can be used.
+It is also easier to trace syscalls (with `strace` or `truss`),
+now that a single test function can be executed.
+
+### Progress status
+
+At the time of writing, the test suite has (almost) been completely rewritten!
+The original test suite had more than 7400 lines split between 225 files.
+This rewrite includes more than 92% of the original test suite, the exception being
+some granular tests.
+We judged that it would take too much time to rewrite all of them accurately,
+especially because NFSv4 ACLs are really complicated (there is no written
+standard to check the expected behavior, we have to rely on the implementations)
+and the tests are actually incomplete.
+Otherwise, some tests still need to be merged,
+and we're refactoring the error tests,
+but the rewrite is already usable!
+
+### Appendix
 
 Benchmark commands:
 ```sh
@@ -609,31 +658,6 @@ Summary
 
 ```
 
-#### Configurability
-
-The test suite can optionally be configured with a configuration file,
-to specify what are the supported features or
-the minimum sleep time for file system to takes changes into account for example.
-
-#### Debugging
-
-Because the rewrite is in Rust, standard debuggers (in particular `lldb`) can be used.
-It is also easier to trace syscalls with `strace`,
-now that a single test function can be executed.
-
-### Progress status
-
-At the time of writing, the test suite has (almost) been completely rewritten!
-The original test suite had more than 7400 lines split between 225 files.
-This rewrite includes more than 92% of the original test suite, the exception being
-the granular tests.
-We judged that it would take too much time to rewrite all of them accurately,
-especially because NFSv4 ACLs are really complicated (there is no written
-standard to check the expected behavior, we have to rely on the implementations)
-and the tests are actually incomplete.
-Otherwise, some tests still need to be merged,
-and we're refactoring the error tests,
-but the rewrite is already usable.
 
 <!-- ## Looking forward
 
