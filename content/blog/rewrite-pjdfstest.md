@@ -51,7 +51,7 @@ with a C component to use syscalls from shell script,
 which we are going to see more in detail in the next section.
 
 {% tip() %}
-[TAP](https://testanything.org/) is a simple protocol for test results.
+[TAP](https://testanything.org/) is a simple protocol for test reports.
 {% end %}
 
 {% info() %}
@@ -167,16 +167,23 @@ However, the supported configurations were hard coded
 in the test suite and consequently couldn't be easily configured,
 like with a configuration file or the command-line.
 
-It also cannot be run as an unprivileged user because it assumes that the current user
-is the super-user and doesn't make distinction with the parts requiring privileges.
+It also cannot skip tests correctly. The tests to be skipped just
+have their TAP plan rewritten to send "1..1\nok 1",
+which hardly give feedback to the user that the test wasn't executed.
+
 ### Isolation
 
 A lot of assertions are written in a single file.
-This is due to TAP which encourages large tests
+This is due to the TAP-based approach which encourages large tests
 instead of small isolated ones, but also because it's harder
 to split and refactor a shell script. 
 
-Given the lack of isolation between these assertions,
+Another problem is that some tests needs privileges to be run.
+Because it assumes that the current user
+is the super-user and doesn't make distinction with the parts requiring privileges, it's impossible to know which parts fail because of the lack
+of rights.
+
+Also, given the lack of isolation between these assertions,
 it is more difficult to debug errors.
 
 ### Debugging
@@ -186,7 +193,7 @@ it is difficult to understand what went wrong in case of failure.
 Also, writing tests in shell script made them easy to read
 and quick to modify,
 but paradoxically harder to debug, because there's no sh debugger.
-The TAP-based approach doesn't help because the number used to validate
+The TAP output doesn't help a lot because the number used to validate
 an assertion lacks context.
 
 ### Duplication
@@ -213,6 +220,13 @@ to complete the suite, when it could be way less.
 One of the other reasons is that it contains many 1-second sleeps, 
 which could be smaller (depending on the file system timestamp granularity) 
 if it had better configurability.
+
+### Documentation
+
+This one is more of a bonus, but the lack of documentation,
+even if it isn't really hard to connect the dots,
+make harder for potential contributors to understand the
+code.
 
 ## Rewrite it in Rust
 
@@ -322,8 +336,9 @@ pjdfs_test_case!(
 However, as we can see, it introduced a lot of boilerplate, 
 so we finally decided to use the [`inventory`](https://github.com/dtolnay/inventory)
 crate.
-With it, we can collect the tests without having to declare a test group.
-A test can now be declared with the `crate::test_case!` macro,
+With it, we can collect the tests without having to declare
+a test group or a test case.
+We simply had to write the `crate::test_case!` macro,
 which collects the test function name with 
 a description (which is displayed to the user),
 while allowing parameterization of the test
@@ -352,7 +367,8 @@ fn failed_chmod_unchanged_ctime(ctx: &mut SerializedTestContext, f_type: FileTyp
 
 {% info() %}
 Here, the test will not be executed in a parallel context (`serialized`),
-require privileges (`root`) and will be executed over the `Regular`, `Dir`, `Fifo`, `Block`, `Char`
+require privileges (`root`) and will be executed over the
+`Regular`, `Dir`, `Fifo`, `Block`, `Char`
 and `Socket` file types.
 {% end %}
 
@@ -405,17 +421,51 @@ We don't want to stop running all the tests when one fails!
 This can be solved, by catching the panic
 with the help of [`std::panic::catch_unwind`](https://doc.rust-lang.org/std/panic/fn.catch_unwind.html).
 
+{% wrong() %}
+If you want to break the test suite...
+
+###### Cargo.toml
+
+```toml
+[profile.release]
+panic = 'abort'
+```
+
+{% end %}
+
+```rust
+fn main() {
+    ...
+    let tests = inventory::iter::<TestCase>;
+    for test in tests {
+        ...
+        // catch_unwind returns a Result, which is an Err if the 
+        // provided function panics
+        // We provide a closure to catch_unwind
+        let res = catch_unwind(|| {
+            let ctx = ...;
+            (test.fun)(ctx)
+        });
+
+        match res {
+            Ok(_) => ...,
+            Err(e) => ...,
+        }
+    }
+}
+```
+
 Now that we know how to write tests, we can start, right?
-Well, we can if we don't want isolation between tests
+Well, we can, if we don't want isolation between tests
 (and future support for parallelization).
 For example, almost all tests need to create files.
 If we don't care about isolation, we could just create them
-in the current directory and call it a day.
-
+in the current directory and call it a day.\
 But that wouldn't work well in a parallel context,
-therefore we need to isolate the tests' context from each other.
-We accomplish this by creating a separate directory for each test function,
-and with the `TestContext` struct,
+therefore we need to isolate the tests' contexts from each other.
+We accomplish this by creating a temporary directory
+for each test function (which the original did but manually),
+and by using the `TestContext` struct,
 which wraps the methods to create files inside the said directory
 and automatically cleanup, among other things.
 
@@ -476,7 +526,8 @@ fn clear_isgid_bit(ctx: &mut SerializedTestContext) {
     chown(&path, Some(user.uid), Some(user.gid)).unwrap();
 
     let expected_mode = Mode::from_bits_truncate(0o2755);
-    // Change user
+    // Change user, which affects the whole process and therefore
+    // is only available with the `SerializedTestContext`
     ctx.as_user(&user, None, || {
         chmod(&path, expected_mode).unwrap();
     });
@@ -535,6 +586,8 @@ Files=1, Tests=122,  8 wallclock secs ( 0.04 usr  0.01 sys +  0.65 cusr  0.41 cs
 Result: PASS
 ```
 
+####
+
 #### Performance
 #### TL;DR 100x faster and more to expect with parallelization!
 
@@ -542,6 +595,7 @@ This is probably the most exciting part and Rust doesn't disappoint on this one!
 With the improved configurability, it's now possible to manually specify a time
 for the sleeps, which depends on the timestamp granularity of the tested file system. 
 This greatly improves the speed, but this isn't the only slowness factor.
+As explained earlier, the calls to external programs do have a high cost.
 
 | Test suite | Time |
 |------------|------|
@@ -553,8 +607,7 @@ This greatly improves the speed, but this isn't the only slowness factor.
 > Tested on a FreeBSD laptop with 8 cores, on the ZFS file system.
 > The original test suite is executed with the `prove` TAP harness.
 
-From these non-rigorous benchmarks, we can see that there is an important speed gap
-between the original test suite and its rewrite.
+From these non-rigorous benchmarks, we can see that there is an important speed gap between the original test suite and its rewrite.
 
 With reduced sleep time, the rewrite can execute the entire test suite in only one second!
 Even with 1-second sleeps, the rewrite is still faster than the original
@@ -614,7 +667,22 @@ Otherwise, some tests still need to be merged,
 and we're refactoring the error tests,
 but the rewrite is already usable!
 
-### Appendix
+<!-- ## Looking forward
+
+
+### ATF support
+
+### Parallelization
+
+### Features clarification
+
+### Command-line improvements
+
+file types filter, syscall filter -->
+
+## Acknowledgements
+
+## Appendix
 
 Benchmark commands:
 ```sh
@@ -658,16 +726,3 @@ Summary
 
 ```
 
-
-<!-- ## Looking forward
-
-
-### ATF support
-
-### Parallelization
-
-### Features clarification
-
-### Command-line improvements
-
-file types filter, syscall filter -->
