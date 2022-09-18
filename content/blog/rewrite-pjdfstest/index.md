@@ -672,7 +672,7 @@ especially because NFSv4 ACLs are really complicated (there is no written
 standard to check the expected behavior, we have to rely on the implementations)
 and the tests are actually incomplete.
 Otherwise, some tests still need to be merged,
-and we're refactoring the error tests,
+as we're refactoring the error tests,
 but the rewrite is already usable!
 
 ## Looking forward
