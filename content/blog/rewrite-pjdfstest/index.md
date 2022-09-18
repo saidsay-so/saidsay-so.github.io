@@ -78,7 +78,7 @@ It acts as a thin layer between syscalls and shell, by providing a
 command-line interface similar to how these syscalls should be called in C.
 It returns the result on the standard output, 
 whether that be a formatted one like for the `stat(2)` output,
-an error string when a syscall fails, or simply 0 when all went well.
+an error string when a syscall fails, or 0 when all went well.
 For example, to `unlink(2)` a file: `./pjdfstest unlink path` which should return 0 if the file has been successfully deleted,
 or `ENOENT` for example if it doesn't exist. 
 The program isn't used directly by the test cases, 
@@ -87,7 +87,7 @@ but through the `expect` bash function.
 ### Test case
 
 The test cases are plain shell scripts which contains assertions. 
-An assertion is simply a call to the `expect` bash function, which takes as parameters the expected output
+An assertion is a call to the `expect` bash function, which takes as parameters the expected output
 and the arguments to be forwarded to the `pjdfstest` binary. 
 The binary then executes the syscall and send its result back to the `expect` function,
 which compares the output with what's expected,
@@ -185,8 +185,8 @@ to split and refactor a shell script.
 
 Another problem is that some tests needs privileges to be run.
 Because it assumes that the current user
-is the super-user and doesn't make distinction with the parts requiring privileges, it's impossible to know which parts fail because of the lack
-of rights.
+is the super-user and doesn't make distinction with the parts requiring privileges,
+it's impossible to know which parts fail because of the lack of rights.
 
 Also, given the lack of isolation between these assertions,
 it's more difficult to debug errors.
@@ -348,7 +348,7 @@ so we finally decided to use the [`inventory`](https://github.com/dtolnay/invent
 crate.
 With it, we can collect the tests without having to declare
 a test group or a test case.
-We simply have to write the `crate::test_case!` macro,
+We now just have to write the `crate::test_case!` macro,
 which collects the test function name with 
 a description (which is displayed to the user),
 while allowing parameterization of the test
@@ -591,16 +591,14 @@ Files=1, Tests=122,  8 wallclock secs ( 0.04 usr  0.01 sys +  0.65 cusr  0.41 cs
 Result: PASS
 ```
 
+The test suite also separates tests which require privileges
+and don't execute them if the user doesn't have the appropriated rights.
+
 #### Performance
 
 #### TL;DR 100x faster and more to expect with parallelization!
 
 This is probably the most exciting part and Rust doesn't disappoint on this one!
-With the improved configurability, it's now possible to manually specify a time
-for the sleeps, which depends on the timestamp granularity of the tested file system. 
-This greatly improves the speed, but this isn't the only slowness factor.
-As explained earlier, the calls to external programs and the old architecture
-in general do have a high cost.
 
 ![Time comparison between original and rewrite](time-comparison.png)
 
@@ -616,7 +614,13 @@ in general do have a high cost.
 
 From these non-rigorous benchmarks, we can see that there is an important speed gap between the original test suite and its rewrite.
 
-With reduced sleep time, the rewrite can execute the entire test suite in only one second!
+With the improved configurability, it's now possible to manually specify a time
+for the sleeps. 
+This greatly improves the speed, but this isn't the only slowness factor.
+As explained earlier, the calls to external programs and the old architecture
+in general do have a high cost.
+
+Now, with reduced sleep time, the rewrite can execute the entire test suite in only one second!
 Even with 1-second sleeps, the rewrite is still faster than the original
 with 8 jobs running!
 
@@ -649,9 +653,6 @@ the minimum sleep time for file system to takes changes into account for example
 # the timestamp granularity of the file system under test.
 naptime = 0.001
 ```
-
-As for the root privileges, the test suite doesn't run tests which requires
-them if the user doesn't have the rights.
 
 #### Debugging
 
@@ -701,8 +702,8 @@ granularity, but not for the others.
 We can improve the speed by implementing parallelization,
 which would allow the runner to run multiple tests in parallel.
 The `serialized` tests would need to be run separately, 
-but there is enough tests which don't rely on being the only one running
-to justify implementing it and have a noticeable speed gain.
+but there is enough tests which don't rely on it
+to justify implementing parallelization with a noticeable speed gain.
 
 ### Command-line improvements
 
