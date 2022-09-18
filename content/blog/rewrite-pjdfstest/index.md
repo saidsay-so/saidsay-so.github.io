@@ -32,6 +32,7 @@ its current shortcomings and how rewriting it in Rust has solved them.
 These introductory words are to thank my mentor [Alan Somers](https://github.com/asomers),
 for accepting the proposal, helping and guiding me through this journey!
 His high availability and his contributions helped me a lot to do this project!
+I also want to thank all the crate maintainers who allowed to create this project!
 
 ## Code
 
@@ -42,7 +43,7 @@ The code is available on [GitHub](https://github.com/musikid/pjdfstest).
 First, [pjdfstest](https://github.com/pjd/pjdfstest) is a test suite for POSIX system calls.
 It checks that they behave correctly according to the specification, e.g. return the right errors,
 change time metadata when appropriated, succeed when they should, etc.
-It is particularly useful to test file systems, and mainly used to this effect.
+It's particularly useful to test file systems, and mainly used to this effect.
 In fact, it was originally written to validate the ZFS port to FreeBSD,
 but it now supports multiple operating systems and file systems, while still 
 primarily used by the FreeBSD project to test against UFS and ZFS file systems.
@@ -65,7 +66,8 @@ After this little introduction, let's explore how its current architecture is bu
 Like explained earlier, the main language for the test suite is Shell script.
 This is a high-level language, available on multiple platforms
 and with a simple syntax if we consider the POSIX-compatible subset.
-However, it is impossible to rely solely on it to test syscalls.
+However, it's impossible to rely solely on it to test syscalls since
+it doesn't have bindings to call these functions directly.
 Even if most syscalls have binaries counterparts,
 what should be tested is their implementations.
 
@@ -77,12 +79,14 @@ command-line interface similar to how these syscalls should be called in C.
 It returns the result on the standard output, 
 whether that be a formatted one like for the `stat(2)` output,
 an error string when a syscall fails, or simply 0 when all went well.
-For example, to `unlink` a file: `./pjdfstest unlink path` which should return 0 if the file
-has been successfully deleted, or `ENOENT` for example if it doesn't exist.
+For example, to `unlink(2)` a file: `./pjdfstest unlink path` which should return 0 if the file has been successfully deleted,
+or `ENOENT` for example if it doesn't exist. 
+The program isn't used directly by the test cases, 
+but through the `expect` bash function.
 
 ### Test case
 
-The test cases are grouped in folders named after the syscall being tested and contain assertions.
+The test cases are plain shell scripts which contains assertions. 
 An assertion is simply a call to the `expect` bash function, which takes as parameters the expected output
 and the arguments to be forwarded to the `pjdfstest` binary. 
 The binary then executes the syscall and send its result back to the `expect` function,
@@ -137,10 +141,13 @@ for type in regular dir fifo block char socket symlink; do
 
 ### Execution
 
-The test cases can be launched directly,
-but they need a TAP harness for the assertions to work.
-They are usually executed through the `prove` harness,
-which is commonly included with `perl`.
+The cases are grouped in folders named after the syscall being tested.
+Since they're shell scripts, the test cases could be launched directly,
+but they still need a TAP harness for the assertions to work.
+They are usually executed through the `prove` harness
+(which is commonly included with `perl`).
+
+
 ##### Architecture's chart
 
 {% mermaid() %}
@@ -156,8 +163,6 @@ This architecture has its advantages,
 like readable tests or quick modifications,
 but several limitations also arise from it.
 
- <!-- * No ATF integration.  This isn't critical, but it sure would be nice if pjdfstest could display detailed results at https://ci.freebsd.org/job/FreeBSD-main-amd64-test/lastCompletedBuild/testReport/ . -->
-
 ### Configurability
 
 Some features (like `chflags(2)`) aren't systematically implemented on file systems,
@@ -167,7 +172,7 @@ However, the supported configurations were hard coded
 in the test suite and consequently couldn't be easily configured,
 like with a configuration file or the command-line.
 
-It also cannot skip tests correctly. The tests to be skipped just
+It also can't skip tests correctly. The tests to be skipped just
 have their TAP plan rewritten to send "1..1\nok 1",
 which hardly give feedback to the user that the test wasn't executed.
 
@@ -184,12 +189,12 @@ is the super-user and doesn't make distinction with the parts requiring privileg
 of rights.
 
 Also, given the lack of isolation between these assertions,
-it is more difficult to debug errors.
+it's more difficult to debug errors.
 
 ### Debugging
 
 As a consequence of large test files,
-it is difficult to understand what went wrong in case of failure.
+it's difficult to understand what went wrong in case of failure.
 Also, writing tests in shell script made them easy to read
 and quick to modify,
 but paradoxically harder to debug, because there's no sh debugger.
@@ -207,19 +212,23 @@ factored out.
 
 ### TAP plan
 
-Each time a file is modified, its TAP plan needs to be recomputed.
+Each time a file is modified, its TAP plan needs to be recomputed manually.
 I don't think that needs further elaboration...
 
 ### Performance
 
 Performance is also one of the shortcomings.
-Because it's written in shell script, 
-which relies on external programs to execute most of its operations,
+Because it's written in shell script,
 it takes almost 5 minutes (with one job) 
 to complete the suite, when it could be way less.
 One of the other reasons is that it contains many 1-second sleeps, 
 which could be smaller (depending on the file system timestamp granularity) 
 if it had better configurability.
+
+{% info() %}
+1-second sleeps are useful to test if a time metadata has or hasn't
+changed because of an operation.
+{% end %}
 
 ### Documentation
 
@@ -254,7 +263,8 @@ and not in the GSoC scope but good to have:
 The first thing we had to think on is how to collect the tests.
 Since there isn't a `pytest`-like package in Rust, we had to investigate
 on existing approaches.
-Since the result should be a binary, techniques related to `cargo test` were excluded.
+
+Since the result should be a binary, techniques based on `cargo test` were excluded.
 We wanted to go first with the standard Rust `#[test]` attribute to collect the functions,
 but the API is not public.
 
@@ -338,12 +348,12 @@ so we finally decided to use the [`inventory`](https://github.com/dtolnay/invent
 crate.
 With it, we can collect the tests without having to declare
 a test group or a test case.
-We simply had to write the `crate::test_case!` macro,
+We simply have to write the `crate::test_case!` macro,
 which collects the test function name with 
 a description (which is displayed to the user),
 while allowing parameterization of the test
 (to require preconditions or features, iterate over file types, 
-specify that the test shouldn't be run in parallel, etc.).
+specify that the test shouldn't be run in parallel, etc).
 
 ##### main.rs
 
@@ -421,18 +431,6 @@ We don't want to stop running all the tests when one fails!
 This can be solved, by catching the panic
 with the help of [`std::panic::catch_unwind`](https://doc.rust-lang.org/std/panic/fn.catch_unwind.html).
 
-{% wrong() %}
-If you want to break the test suite...
-
-###### Cargo.toml
-
-```toml
-[profile.release]
-panic = 'abort'
-```
-
-{% end %}
-
 ```rust
 fn main() {
     ...
@@ -455,16 +453,27 @@ fn main() {
 }
 ```
 
+{% wrong() %}
+If you want to break the test suite...
+
+###### Cargo.toml
+
+```toml
+[profile.release]
+panic = 'abort'
+```
+{% end %}
+
 Now that we know how to write tests, we can start, right?
 Well, we can, if we don't want isolation between tests
-(and future support for parallelization).
+(and so future support for parallelization).
 For example, almost all tests need to create files.
 If we don't care about isolation, we could just create them
 in the current directory and call it a day.\
 But that wouldn't work well in a parallel context,
 therefore we need to isolate the tests' contexts from each other.
 We accomplish this by creating a temporary directory
-for each test function (which the original did but manually),
+for each test function (which the original did manually),
 and by using the `TestContext` struct,
 which wraps the methods to create files inside the said directory
 and automatically cleanup, among other things.
@@ -477,18 +486,14 @@ crate::test_case! {
     extend_file_shrink_sparse
 }
 fn extend_file_shrink_sparse(ctx: &mut TestContext) {
+    // Create a file with the test context
     let file = ctx.create(FileType::Regular).unwrap();
     let size = 1234567;
     assert!(truncate(&file, size).is_ok());
 
     let actual_size = lstat(&file).unwrap().st_size;
     assert_eq!(actual_size, size);
-
-    let size = 567;
-    assert!(truncate(&file, size).is_ok());
-
-    let actual_size = lstat(&file).unwrap().st_size;
-    assert_eq!(actual_size, size);
+    ...
 }
 ```
 
@@ -586,16 +591,18 @@ Files=1, Tests=122,  8 wallclock secs ( 0.04 usr  0.01 sys +  0.65 cusr  0.41 cs
 Result: PASS
 ```
 
-####
-
 #### Performance
+
 #### TL;DR 100x faster and more to expect with parallelization!
 
 This is probably the most exciting part and Rust doesn't disappoint on this one!
 With the improved configurability, it's now possible to manually specify a time
 for the sleeps, which depends on the timestamp granularity of the tested file system. 
 This greatly improves the speed, but this isn't the only slowness factor.
-As explained earlier, the calls to external programs do have a high cost.
+As explained earlier, the calls to external programs and the old architecture
+in general do have a high cost.
+
+![Time comparison between original and rewrite](time-comparison.png)
 
 | Test suite | Time |
 |------------|------|
@@ -614,7 +621,7 @@ Even with 1-second sleeps, the rewrite is still faster than the original
 with 8 jobs running!
 
 The rewrite doesn't support running the tests in parallel yet, but it's something
-that will definitely improve the suite's speed even with long sleep time.
+that will definitely improve the speed even with long sleep time.
 
 #### Configurability
 
@@ -650,10 +657,10 @@ them if the user doesn't have the rights.
 
 Because the rewrite is in Rust, standard debuggers 
 (in particular `rust-lldb`) can be used.
-It is also easier to trace syscalls (with `strace` or `truss`),
+It's also easier to trace syscalls (with `strace` or `truss`),
 now that a single test function can be executed.
 
-### Progress status
+## Progress status
 
 At the time of writing, the test suite has (almost) been completely rewritten!
 The original test suite had more than 7400 lines split between 225 files.
@@ -667,20 +674,41 @@ Otherwise, some tests still need to be merged,
 and we're refactoring the error tests,
 but the rewrite is already usable!
 
-<!-- ## Looking forward
+## Looking forward
 
+New functionalities can be implemented after the rewrite is done.
+They would improve the test suite integration 
+along with the experience for file system developers.
 
 ### ATF support
 
+The FreeBSD's CI infrastructure is based on the 
+[Kyua](https://www.freebsd.org/cgi/man.cgi?query=kyua&sektion=1&apropos=0&manpath=FreeBSD+13.1-RELEASE+and+Ports) 
+test runner.
+It supports running framework-less and TAP test programs, but most importantly
+[ATF](https://www.freebsd.org/cgi/man.cgi?query=atf&apropos=0&sektion=0&manpath=FreeBSD+13.1-RELEASE+and+Ports&arch=default&format=html)
+-based tests.
+The ATF protocol greatly improve reporting for the test runner,
+by allowing to have test names and descriptions.
+It's fairly easy to implement it for our test runner, 
+and it would drastically improve reporting on the FreeBSD CI.
+
 ### Parallelization
 
-### Features clarification
+For now, tests are executed sequentially. 
+This isn't a real problem for file systems with sub-second timestamp
+granularity, but not for the others.
+We can improve the speed by implementing parallelization,
+which would allow the runner to run multiple tests in parallel.
+The `serialized` tests would need to be run separately, 
+but there is enough tests which don't rely on being the only one running
+to justify implementing it and have a noticeable speed gain.
 
 ### Command-line improvements
 
-file types filter, syscall filter -->
-
-## Acknowledgements
+Now that the test suite's granularity has been improved,
+we can work on providing a better command-line interface,
+to provide filtering on file types or syscalls for example.
 
 ## Appendix
 
@@ -725,4 +753,3 @@ Summary
     1.57 ± 0.03 times faster than 'prove -rvj8 ../tests >/dev/null'
 
 ```
-
