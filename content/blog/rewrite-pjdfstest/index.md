@@ -32,7 +32,8 @@ its current shortcomings and how rewriting it in Rust has solved them.
 These introductory words are to thank my mentor [Alan Somers](https://github.com/asomers),
 for accepting the proposal, helping and guiding me through this journey!
 His high availability and his contributions helped me a lot to do this project!
-I also want to thank all the crate maintainers who allowed to create this project!
+I also want to thank all the crate maintainers who allowed this project
+to be created!
 
 ## Code
 
@@ -592,7 +593,7 @@ Result: PASS
 ```
 
 The test suite also separates tests which require privileges
-and don't execute them if the user doesn't have the appropriated rights.
+and skip them if the user doesn't have the appropriated rights.
 
 #### Performance
 
@@ -672,7 +673,7 @@ especially because NFSv4 ACLs are really complicated (there is no written
 standard to check the expected behavior, we have to rely on the implementations)
 and the tests are actually incomplete.
 Otherwise, some tests still need to be merged,
-as we're refactoring the error tests,
+as we've refactored the error tests,
 but the rewrite is already usable!
 
 ## Looking forward
