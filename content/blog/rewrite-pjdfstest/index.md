@@ -203,8 +203,8 @@ Because it's written in shell, DRY (Don't Repeat Yourself) is difficult to achie
 This leads to a lot of duplication between the tests,
 with only a few lines changed between the files.
 This is particularly visible on the error tests,
-which share an enormous amount of code and yet are not 
-factored out.
+which share an enormous amount of code and yet aren't 
+factorized.
 
 ### TAP plan
 
@@ -612,13 +612,15 @@ From these non-rigorous benchmarks, we can see that there is an important speed 
 
 With the improved configurability, it's now possible to manually specify a time
 for the sleeps. 
-This greatly improves the speed, but this isn't the only slowness factor.
+This greatly improves the speed, but this wasn't the only slowness factor.
 As explained earlier, the calls to external programs and the old architecture
-in general do have a high cost.
+in general did have a high cost.
 
 Now, with reduced sleep time, the rewrite can execute the entire test suite in only one second!
-Even with 1-second sleeps, the rewrite is still faster than the original
-with 8 jobs running!
+That's 100 times faster than the original with 8 jobs running, and 350 faster than the original with
+sequential tests!
+Even with 1-second sleeps, the rewrite is still 1.5 times faster than the original
+with 8 jobs running! 
 
 The rewrite doesn't support running the tests in parallel yet, but it's something
 that will definitely improve the speed even with long sleep time.
