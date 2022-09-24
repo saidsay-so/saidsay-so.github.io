@@ -15,6 +15,8 @@ math = false
 mermaid = false
 +++
 
+**TL;DR More than 100x faster than the original and more to expect with parallelization!**
+
 > Your proposal Rewrite PJDFSTest suite has been accepted by Org The FreeBSD Project for GSoC 2022.
 
 So, here we are! My proposal for the Google Summer of Code has been accepted,
@@ -153,13 +155,13 @@ They are usually executed through the `prove` harness
 
 ![Chart of the original test suite architecture](arch-chart.png)
 
-## Limitations
+### Limitations
 
 This architecture has its advantages, 
 like readable tests or quick modifications,
 but several limitations also arise from it.
 
-### Configurability
+#### Configurability
 
 Some features (like `chflags(2)`) aren't systematically implemented on file systems,
 often because they aren't part of the POSIX specification.
@@ -172,7 +174,7 @@ It also can't skip tests correctly. The tests to be skipped just
 have their TAP plan rewritten to send "1..1\nok 1",
 which hardly give feedback to the user that the test wasn't executed.
 
-### Isolation
+#### Isolation
 
 A lot of assertions are written in a single file.
 This is due to the TAP-based approach which encourages large tests
@@ -187,7 +189,7 @@ it's impossible to know which parts fail because of the lack of rights.
 Also, given the lack of isolation between these assertions,
 it's more difficult to debug errors.
 
-### Debugging
+#### Debugging
 
 As a consequence of large test files,
 it's difficult to understand what went wrong in case of failure.
@@ -197,7 +199,7 @@ but paradoxically harder to debug, because there's no sh debugger.
 The TAP output doesn't help a lot because the number used to validate
 an assertion lacks context.
 
-### Duplication
+#### Duplication
 
 Because it's written in shell, DRY (Don't Repeat Yourself) is difficult to achieve.
 This leads to a lot of duplication between the tests,
@@ -206,12 +208,12 @@ This is particularly visible on the error tests,
 which share an enormous amount of code and yet aren't 
 factorized.
 
-### TAP plan
+#### TAP plan
 
 Each time a file is modified, its TAP plan needs to be recomputed manually.
 I don't think that needs further elaboration...
 
-### Performance
+#### Performance
 
 Performance is also one of the shortcomings.
 Because it's written in shell script,
@@ -226,7 +228,7 @@ if it had better configurability.
 changed because of an operation.
 {% end %}
 
-### Documentation
+#### Documentation
 
 This one is more of a bonus, but the lack of documentation,
 even if it isn't really hard to connect the dots,
@@ -272,7 +274,7 @@ annotated with the `#[test]` attribute.
 
 An experimental public [implementation](https://github.com/rust-lang/rust/issues/50297)
 is available on the Nightly channel,
-but relying on Nightly for a test suite was quite ironic
+but relying on Nightly for a test suite was somewhat ironic
 and making harder to build it.
 Instead, we initially implemented an approach 
 similar to [Criterion](https://github.com/bheisler/criterion.rs)'s one,
@@ -541,9 +543,9 @@ Thanks to the `nix` crate, we were able to use syscalls in Rust.
 With all this and a few other methods, we rewrote the test suite
 while solving the previous limitations.
 
-### What's new?
+## What's new?
 
-#### Isolation
+### Isolation
 
 Now, the assertions are grouped inside a test function,
 which allows filtering tests with improved granularity.
@@ -590,9 +592,7 @@ Result: PASS
 The test suite also separates tests which require privileges
 and skip them if the user doesn't have the appropriated rights.
 
-#### Performance
-
-#### TL;DR 100x faster and more to expect with parallelization!
+### Performance
 
 This is probably the most exciting part and Rust doesn't disappoint on this one!
 
@@ -617,7 +617,7 @@ As explained earlier, the calls to external programs and the old architecture
 in general did have a high cost.
 
 Now, with reduced sleep time, the rewrite can execute the entire test suite in only one second!
-That's 100 times faster than the original with 8 jobs running, and 350 faster than the original with
+That's 139 times faster than the original with 8 jobs running, and 350 faster than the original with
 sequential tests!
 Even with 1-second sleeps, the rewrite is still 1.5 times faster than the original
 with 8 jobs running! 
@@ -625,7 +625,7 @@ with 8 jobs running!
 The rewrite doesn't support running the tests in parallel yet, but it's something
 that will definitely improve the speed even with long sleep time.
 
-#### Configurability
+### Configurability
 
 The test suite can optionally be configured with a configuration file,
 to specify what are the supported features or
@@ -652,7 +652,7 @@ the minimum sleep time for file system to takes changes into account for example
 naptime = 0.001
 ```
 
-#### Debugging
+### Debugging
 
 Because the rewrite is in Rust, standard debuggers 
 (in particular `rust-lldb`) can be used.
