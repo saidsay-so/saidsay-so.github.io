@@ -47,9 +47,11 @@ First, [pjdfstest](https://github.com/pjd/pjdfstest) is a test suite for POSIX s
 It checks that they behave correctly according to the specification, e.g. return the right errors,
 change time metadata when appropriated, succeed when they should, etc.
 It's particularly useful to test file systems, and mainly used to this effect.
+
 In fact, it was originally written to validate the ZFS port to FreeBSD,
 but it now supports multiple operating systems and file systems, while still 
 primarily used by the FreeBSD project to test against UFS and ZFS file systems.
+
 Its tests are written in Shell script and relies on the TAP protocol to be executed, 
 with a C component to use syscalls from shell script, 
 which we are going to see more in detail in the next section.
@@ -69,6 +71,7 @@ After this little introduction, let's explore how its current architecture is bu
 Like explained earlier, the main language for the test suite is Shell script.
 This is a high-level language, available on multiple platforms
 and with a simple syntax if we consider the POSIX-compatible subset.
+
 However, it's impossible to rely solely on it to test syscalls since
 it doesn't have bindings to call these functions directly.
 Even if most syscalls have binaries counterparts,
@@ -82,6 +85,7 @@ command-line interface similar to how these syscalls should be called in C.
 It returns the result on the standard output, 
 whether that be a formatted one like for the `stat(2)` output,
 an error string when a syscall fails, or 0 when all went well.
+
 For example, to `unlink(2)` a file: `./pjdfstest unlink path` which should return 0 if the file has been successfully deleted,
 or `ENOENT` for example if it doesn't exist. 
 The program isn't used directly by the test cases, 
@@ -166,6 +170,7 @@ but several limitations also arise from it.
 Some features (like `chflags(2)`) aren't systematically implemented on file systems,
 often because they aren't part of the POSIX specification.
 To account this, the test suite has a concept of features.
+
 However, the supported configurations were hard coded 
 in the test suite and consequently couldn't be easily configured,
 like with a configuration file or the command-line.
@@ -230,7 +235,7 @@ changed because of an operation.
 
 #### Documentation
 
-This one is more of a bonus, but the lack of documentation,
+The lack of documentation,
 even if it isn't really hard to connect the dots,
 make harder for potential contributors to understand the
 code.
@@ -346,6 +351,7 @@ so we finally decided to use the [`inventory`](https://github.com/dtolnay/invent
 crate.
 With it, we can collect the tests without having to declare
 a test group or a test case.
+
 We now just have to write the `crate::test_case!` macro,
 which collects the test function name with 
 a description (which is displayed to the user),
@@ -424,6 +430,7 @@ mod tests {
 This implies that the test functions will panic if something goes wrong.
 That's usually not a problem because the unit tests are compiled as individual binaries,
 so when one test panics, it doesn't stop others from running.
+
 But, in our case, the tests are handled by a unique runner.
 We don't want to stop running all the tests when one fails!
 This can be solved, by catching the panic
@@ -489,8 +496,6 @@ fn extend_file_shrink_sparse(ctx: &mut TestContext) {
     let size = 1234567;
     assert!(truncate(&file, size).is_ok());
 
-    let actual_size = lstat(&file).unwrap().st_size;
-    assert_eq!(actual_size, size);
     ...
 }
 ```
@@ -512,23 +517,14 @@ the effective user in a controlled manner.
 {% end %}
 
 ```rust
-crate::test_case! {
-    /// S_ISGID bit shall be cleared upon successful return from chmod of a regular file
-    /// if the calling process does not have appropriate privileges, and if
-    /// the group ID of the file does not match the effective group ID or one of the
-    /// supplementary group IDs
-    clear_isgid_bit, serialized, root
-}
+crate::test_case! {clear_isgid_bit, serialized, root}
 fn clear_isgid_bit(ctx: &mut SerializedTestContext) {
-    let path = ctx.create(FileType::Regular).unwrap();
-    chmod(&path, Mode::from_bits_truncate(0o0755)).unwrap();
-
+    ...
     // Get a dummy user
     let user = ctx.get_new_user();
 
-    chown(&path, Some(user.uid), Some(user.gid)).unwrap();
+    ...
 
-    let expected_mode = Mode::from_bits_truncate(0o2755);
     // Change user, which affects the whole process and therefore
     // is only available with the `SerializedTestContext`
     ctx.as_user(&user, None, || {
@@ -616,7 +612,7 @@ This greatly improves the speed, but this wasn't the only slowness factor.
 As explained earlier, the calls to external programs and the old architecture
 in general did have a high cost.
 
-Now, with reduced sleep time, the rewrite can execute the entire test suite in only one second!
+Now, the rewrite can execute the entire test suite in only one second with reduced sleep time!
 That's 139 times faster than the original with 8 jobs running, and 350 faster than the original with
 sequential tests!
 Even with 1-second sleeps, the rewrite is still 1.5 times faster than the original
@@ -643,7 +639,6 @@ the minimum sleep time for file system to takes changes into account for example
 # File flags can be specified for OS which supports them.
 # file_flags = ["UF_IMMUTABLE"]
 
-# Might use the key notation as well.
 [features.posix_fallocate]
 
 [settings]
@@ -681,7 +676,7 @@ along with the experience for file system developers.
 
 ### ATF support
 
-The FreeBSD's CI infrastructure is based on the 
+The FreeBSD's test infrastructure is based on the 
 [Kyua](https://www.freebsd.org/cgi/man.cgi?query=kyua&sektion=1&apropos=0&manpath=FreeBSD+13.1-RELEASE+and+Ports) 
 test runner.
 It supports running framework-less and TAP test programs, but most importantly
@@ -696,7 +691,7 @@ and it would drastically improve reporting on the FreeBSD CI.
 
 For now, tests are executed sequentially. 
 This isn't a real problem for file systems with sub-second timestamp
-granularity, but not for the others.
+granularity, but it is for the others.
 We can improve the speed by implementing parallelization,
 which would allow the runner to run multiple tests in parallel.
 The `serialized` tests would need to be run separately, 
