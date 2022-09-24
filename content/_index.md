@@ -7,4 +7,5 @@ lang = "en"
 
 Hi, I'm Sayafdine!
 
-Student at Sorbonne University, DevOps Cloud developer at Société Générale and open source contributor.
+DevOps Cloud engineer at Société Générale, student at Sorbonne University
+and open source contributor.
