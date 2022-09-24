@@ -12,7 +12,7 @@ lang = "en"
 toc = true
 show_comment = true
 math = false
-mermaid = true
+mermaid = false
 +++
 
 > Your proposal Rewrite PJDFSTest suite has been accepted by Org The FreeBSD Project for GSoC 2022.
@@ -151,12 +151,7 @@ They are usually executed through the `prove` harness
 
 ##### Architecture's chart
 
-{% mermaid() %}
-flowchart LR
-PR{"TAP harness\n prove"} === TC{"Test case\n chflags/11.t"} --- E["Assertion\n expect none stat ${n1} flags"] 
-<==> PJD{pjdfstest binary} <==> S[/"Syscall\n stat(n1).st_flags"/]
-{% end %}
-
+![Chart of the original test suite architecture](arch-chart.png)
 
 ## Limitations
 
