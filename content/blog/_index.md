@@ -1,5 +1,5 @@
 +++
-title = "musikid::logs"
+title = "Posts"
 description = "Random thoughts"
 sort_by = "date"
 template = "blog.html"

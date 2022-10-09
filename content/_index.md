@@ -5,7 +5,7 @@ template = "home.html"
 lang = "en"
 +++
 
-Hi, I'm Sayafdine!
+👋 Hi, I'm Sayafdine!
 
 DevOps Cloud engineer at Société Générale, student at Sorbonne University
 and open source contributor.
