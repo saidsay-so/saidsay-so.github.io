@@ -12,6 +12,7 @@ lang = "en"
 toc = true
 show_comment = false
 math = false
+series_only = true
 mermaid = false
 +++
 

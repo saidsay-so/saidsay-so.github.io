@@ -11,6 +11,7 @@ tags = ["gsoc", "gsoc2022", "pjdfstest", "rust"]
 lang = "en"
 toc = true
 show_comment = false
+series_only = true
 math = false
 mermaid = false
 +++
