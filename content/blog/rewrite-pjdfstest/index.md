@@ -15,7 +15,7 @@ math = false
 mermaid = false
 +++
 
-**TL;DR More than 100x faster than the original and more to expect with parallelization!**
+**TL;DR More than 100× faster than the original, with more features and better configurability!**
 
 > Your proposal Rewrite PJDFSTest suite has been accepted by Org The FreeBSD Project for GSoC 2022.
 
@@ -35,7 +35,7 @@ These introductory words are to thank my mentor [Alan Somers](https://github.com
 for accepting the proposal, helping and guiding me through this journey!
 His high availability and his contributions helped me a lot to do this project!
 I also want to thank all the crate maintainers who allowed this project
-to be created!
+to be created and the authors of the original test suite!
 
 ## Code
 
@@ -48,13 +48,13 @@ It checks that they behave correctly according to the specification, e.g. return
 change time metadata when appropriated, succeed when they should, etc.
 It's particularly useful to test file systems, and mainly used to this effect.
 
-In fact, it was originally written to validate the ZFS port to FreeBSD,
+In fact, it was originally written by Pawel Jakub Dawidek to validate the ZFS port to FreeBSD,
 but it now supports multiple operating systems and file systems, while still 
 primarily used by the FreeBSD project to test against UFS and ZFS file systems.
 
 Its tests are written in Shell script and relies on the TAP protocol to be executed, 
 with a C component to use syscalls from shell script, 
-which we are going to see more in detail in the next section.
+which we are going to see in more detail in the next section.
 
 {% tip() %}
 [TAP](https://testanything.org/) is a simple protocol for test reports.
@@ -67,7 +67,6 @@ some non-standardized like `chflags(2)` are tested as well.
 
 ### Architecture
 
-After this little introduction, let's explore how its current architecture is built.
 Like explained earlier, the main language for the test suite is Shell script.
 This is a high-level language, available on multiple platforms
 and with a simple syntax if we consider the POSIX-compatible subset.
@@ -86,7 +85,8 @@ It returns the result on the standard output,
 whether that be a formatted one like for the `stat(2)` output,
 an error string when a syscall fails, or 0 when all went well.
 
-For example, to `unlink(2)` a file: `./pjdfstest unlink path` which should return 0 if the file has been successfully deleted,
+For example, to `unlink(2)` a file: `./pjdfstest unlink path` 
+which should return 0 if the file has been successfully deleted,
 or `ENOENT` for example if it doesn't exist. 
 The program isn't used directly by the test cases, 
 but through the `expect` bash function.
@@ -252,7 +252,7 @@ we want to write a Rust binary, which:
 
 - is self-contained (embed all the tests),
 - can execute the tests (with the test runner),
-- can filter them according to configuration and conditions,
+- can filter them according to configuration and runtime conditions,
 
 and not in the GSoC scope but good to have:
 
@@ -280,7 +280,7 @@ annotated with the `#[test]` attribute.
 An experimental public [implementation](https://github.com/rust-lang/rust/issues/50297)
 is available on the Nightly channel,
 but relying on Nightly for a test suite was somewhat ironic
-and making harder to build it.
+and making harder to build the suite.
 Instead, we initially implemented an approach 
 similar to [Criterion](https://github.com/bheisler/criterion.rs)'s one,
 where a test group (`criterion_group!`) is declared with the test
@@ -357,7 +357,7 @@ which collects the test function name with
 a description (which is displayed to the user),
 while allowing parameterization of the test
 (to require preconditions or features, iterate over file types, 
-specify that the test shouldn't be run in parallel, etc).
+specify that the test shouldn't be run in parallel, etc.).
 
 ##### main.rs
 
@@ -481,7 +481,7 @@ We accomplish this by creating a temporary directory
 for each test function (which the original did manually),
 and by using the `TestContext` struct,
 which wraps the methods to create files inside the said directory
-and automatically cleanup, among other things.
+and automatically clean up, among other things.
 
 ##### tests/truncate.rs
 
@@ -604,22 +604,22 @@ This is probably the most exciting part and Rust doesn't disappoint on this one!
 > Tested on a FreeBSD laptop with 8 cores, on the ZFS file system.
 > The original test suite is executed with the `prove` TAP harness.
 
-From these non-rigorous benchmarks, we can see that there is an important speed gap between the original test suite and its rewrite.
+From these non-rigorous benchmarks, we can see that there is an important speed gap
+between the original test suite and its rewrite.
 
-With the improved configurability, it's now possible to manually specify a time
-for the sleeps. 
-This greatly improves the speed, but this wasn't the only slowness factor.
-As explained earlier, the calls to external programs and the old architecture
-in general did have a high cost.
 
-Now, the rewrite can execute the entire test suite in only one second with reduced sleep time!
+With the rewrite, the entire test suite is executed in only one second!
 That's 139 times faster than the original with 8 jobs running, and 350 faster than the original with
 sequential tests!
 Even with 1-second sleeps, the rewrite is still 1.5 times faster than the original
 with 8 jobs running! 
 
+It's now possible to manually specify a time for the sleeps. 
+This greatly improves the speed, but this wasn't the only slowness factor.
+As explained earlier, the old architecture in general did have a high cost.
+We can see this with the rewrite remaining faster even with 1-second sleep time.
 The rewrite doesn't support running the tests in parallel yet, but it's something
-that will definitely improve the speed even with long sleep time.
+that will definitely improve the speed with long sleep time.
 
 ### Configurability
 
