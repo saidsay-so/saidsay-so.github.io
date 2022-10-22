@@ -1,0 +1,77 @@
+{% extends "_base.html" %}
+
+{% block lang -%}
+{% if section.extra.lang %}{{ section.extra.lang }}
+{%- else %}{{ section.lang }}{% endif %}
+{%- endblock lang -%}
+
+{% block title %}{{ config.title }}{% endblock title %}
+
+{% block desc %}{{ config.description }}{% endblock desc %}
+
+{% block css -%}
+<link rel="stylesheet" href="/css/home.css" />
+<link rel="stylesheet" href="/css/projects.css" />
+<link rel="stylesheet" href="/css/footer.css" />
+{%- endblock css %}
+
+{% block content %}
+<main>
+  <div class="info">
+    <div class="info-text">
+      <p>
+        <span id="name">{{ config.extra.name }}</span>
+        {% if config.extra.show_id -%}
+        <span id="id">@{{ config.extra.id }}</span>
+        {% endif -%}
+      </p>
+      <p id="bio"> {{ config.extra.bio }} </p>
+    </div>
+  </div>
+  <div class="link">
+    <div class="left">
+      <a href="/blog" id="blog">
+        <i class="{{ config.extra.blog_icon }} ri-xl"></i>
+        <span>Blog</span>
+      </a>
+      {% if config.extra.show_resume -%}
+      <a href="/resume.pdf" id="resume">
+        <i class="{{ config.extra.resume_icon }} ri-xl"></i>
+        <span>Resume</span>
+      </a>
+      {% endif -%}
+    </div>
+    <div class="right">
+      {% for link in config.extra.links -%}
+      <a href="{{ link.url }}" aria-label="{{ link.name }}" target="_blank" rel='noreferrer noopener'><i
+          class="{{ link.icon }} ri-xl"></i></a>
+      {% endfor -%}
+      <button id="color-toggle" aria-label="dark light mode switch"><i class="ri-moon-line ri-xl"></i></button>
+    </div>
+  </div>
+  <div class="brief">{{ section.content | trim | safe }}</div>
+  <div class="projects">
+    <h2><i class="ri-compasses-2-line ri-xl"></i> Projects</h2>
+    {% set data = load_data(path="content/projects/data.toml", format="toml") -%}
+    {% for proj in data.project -%}
+    <div class="proj">
+        <div class="image">
+          {% if proj.img %}
+          <img src="{{ proj.img }}" alt="{{ proj.name }}" />
+          {% endif %}
+        </div>
+        <div class="meta">
+          <p class="name">{{ proj.name }}</p>
+          <div class="desc">{{ proj.desc | trim | markdown | safe }}</div>
+          <div class="links">
+            {% for link in proj.links -%}
+            <a href="{{ link.url }}" target="_blank" rel='noreferrer noopener'>{{ link.name }}</a>
+            {%- endfor %}
+          </div>
+        </div>
+    </div>
+    {%- endfor %}
+  </div>
+  {% include "_footer.html" %}
+</main>
+{% endblock content %}

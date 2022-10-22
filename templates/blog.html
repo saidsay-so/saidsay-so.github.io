@@ -1,0 +1,72 @@
+{% extends "_base.html" %}
+
+
+{% block lang -%}
+{% if section.extra.lang %}{{ section.extra.lang }} 
+{%- else %}{{ section.lang }}{% endif %}
+{%- endblock lang %}
+
+{% block title %}{{ section.title }}{% endblock title %}
+
+{% block desc %}{{ section.description }}{% endblock desc %}
+
+{% block css -%}
+<link rel="stylesheet" href="/css/header.css" />
+<link rel="stylesheet" href="/css/footer.css" />
+<link rel="stylesheet" href="/css/blog.css" />
+{%- endblock css %}
+
+{% block content %}
+{% include "_blog_header.html" %}
+<main>
+    <div class="post-list">
+        {% for post in section.pages | slice(end=section.extra.show_post_num) -%}
+            {% if post.extra.series_only is undefined %}
+                <a class="post" href="{{ post.permalink }}">
+                    <span>{{ post.title }}</span>
+                    <span class="date">{{ post.date | date }}</span>
+                </a>
+            {% endif %}
+        {% endfor -%}
+        {% if section.pages | length > section.extra.show_post_num -%}
+        <div class="posts hidden">
+            {% for post in posts | slice(start=section.extra.show_post_num) -%}
+            <a class="post" href="{{ post.permalink }}">
+                <span>{{ post.title }}</span>
+                <span class="date">{{ post.date | date }}</span>
+            </a>
+            {% endfor -%}
+        </div>
+        <div class="showhidden"><button>More<i class="ri-arrow-down-s-line ri-lg"></i></button></div>
+        {% endif -%}
+    </div>
+    <h2>Series</h2>
+    {% for category,posts in section.pages | filter(attribute="taxonomies.categories") | group_by(attribute="taxonomies.categories.0") -%}
+    <div class="title">{{ category }}</div>
+    <div class="post-list">
+        {% for post in posts | slice(end=section.extra.show_post_num) -%}
+        <a class="post" href="{{ post.permalink }}">
+            <span>{{ post.title }}</span>
+            <span class="date">{{ post.date | date}}</span>
+        </a>
+        {% endfor -%}
+        {% if posts | length > section.extra.show_post_num -%}
+        <div class="posts-{{category}} hidden">
+            {% for post in posts | slice(start=section.extra.show_post_num) -%}
+            <a class="post" href="{{ post.permalink }}">
+                <span>{{ post.title }}</span>
+                <span class="date">{{ post.date | date }}</span>
+            </a>
+            {% endfor -%}
+        </div>
+        <div class="showhidden"><button data-category="{{category}}">More<i class="ri-arrow-down-s-line ri-lg"></i></button></div>
+        {% endif -%}
+    </div>
+    {% endfor -%}
+    {% include "_footer.html" %}
+</main>
+{% endblock content %}
+
+{% block script -%}
+<script src="/js/more.js"></script>
+{%- endblock script %}
