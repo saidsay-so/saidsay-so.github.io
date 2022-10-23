@@ -1,0 +1,7 @@
+@mixin chip($font-size: 1rem) {
+  border: 2px var(--primary-color) solid;
+  color: var(--primary-color);
+  padding: calc(#{$font-size / 3} - 2px) calc(#{$font-size} - 2px);
+  border-radius: 20px;
+  font-size: $font-size;
+}

@@ -1,3 +1,5 @@
+@import "mixins";
+
 .projects {
   display: flex;
   flex-direction: column;
@@ -10,19 +12,21 @@
     padding: 1rem;
     margin: 1rem 0;
 
-    .image {
-      flex: 1;
-      align-self: center;
-      img {
-        width: 100%;
-        height: 5rem;
-      }
-    }
     .meta {
       flex: 3;
       .name {
         font-size: 1.3em;
         margin: 0 0 15px 0;
+      }
+      .summary {
+        color: var(--text-second-color);
+      }
+      .techs {
+        display: flex;
+        gap: .5rem;
+        .tech {
+          @include chip(.8rem);
+        }
       }
       .desc {
         line-height: 1.5;
@@ -46,12 +50,13 @@
 
       .links {
         display: flex;
-        justify-content: end;
         a {
           text-decoration: none;
           border-bottom: 2px solid var(--primary-color);
           padding: 0 2px;
-          margin-left: 15px;
+          &:not(:first-child) {
+            margin-left: 1rem;
+          }
           cursor: pointer;
           color: inherit;
           &:visited {
@@ -61,6 +66,29 @@
             color: var(--primary-color);
           }
         }
+      }
+    }
+
+    .image {
+      flex: 1;
+      align-self: center;
+      img {
+        width: 100%;
+        min-height: 5rem;
+        max-height: 7rem;
+      }
+    }
+  }
+}
+
+body.dark-mode {
+  .proj {
+    box-shadow: none;
+    border: 6px solid var(--dark-primary-light-color);
+
+    .meta {
+      .summary {
+        color: var(--dark-text-second-color);
       }
     }
   }

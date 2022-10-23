@@ -1,12 +1,13 @@
 [[project]]
 name = "chwitter"
 img = "https://github.com/musikid/chwitter/raw/main/assets/logo.svg?raw=true"
+summary = "Twitter, but it's lame."
 desc = """
-### Twitter, but it's lame.
-
 A website similar to Twitter, with fewer functionalities.
-The implemented features are messages liking, search function, friends management, light/dark mode, messages creation and profile editing.
+The implemented features are messages liking, search function, friends management, 
+light/dark mode, messages creation and profile editing.
 """
+techs = ["HTML", "CSS", "TypeScript", "React", "Node.js", "Express", "MongoDB"]
 links = [
 	{name = "GitHub", url = "https://github.com/musikid/chwitter"},
 	{name = "Live instance", url = "https://musikid.github.io/chwitter"}
@@ -15,11 +16,12 @@ links = [
 [[project]]
 name = "Wirecheap"
 img = ""
+summary = "Wireshark, but it's cheaper (and less good)."
 desc = """
-### Wireshark, but it's cheaper (and less good).
-
-Ethernet frame analyzer written for a school project. Recognizes DNS, DHCP, UDP and Ethernet protocols.
+Ethernet frame analyzer written for a school project.
+Recognizes DNS, DHCP, UDP and Ethernet protocols.
 """
+techs = ["Java"]
 links = [
 	{name = "GitHub", url = "https://github.com/musikid/wirecheap"},
 ]
@@ -27,11 +29,14 @@ links = [
 [[project]]
 name = "Fancy"
 img = "https://github.com/musikid/fancy/blob/develop/assets/logo.svg?raw=true"
+summary = "Control your laptop fans with a fancy software."
 desc = """
-### Control your laptop fans with a fancy software.
-
-Fancy is a software which allows controlling laptop fans. It includes a service daemon to allow accessing to the EC and controlling it through D-Bus, a CLI to send commands and a GUI (WIP).
+Fancy is a software which allows controlling laptop fans.
+It includes a service daemon to allow accessing to the EC
+and controlling it through D-Bus, 
+a CLI to send commands and a GUI (WIP).
 """
+techs = ["Rust", "D-Bus"]
 links = [
 	{name = "GitHub", url = "https://github.com/musikid/fancy"},
 	{name = "Book", url = "https://musikid.github.io/fancy"}
