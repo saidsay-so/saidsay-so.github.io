@@ -4,7 +4,7 @@ date = 2022-07-04
 draft = false
 
 [taxonomies]
-categories = ["GSoC 2022"]
+series = ["GSoC 2022"]
 tags = ["gsoc", "gsoc2022", "pjdfstest", "rust"]
 
 [extra]

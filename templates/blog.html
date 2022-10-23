@@ -41,7 +41,7 @@
         {% endif -%}
     </div>
     <h2>Series</h2>
-    {% for category,posts in section.pages | filter(attribute="taxonomies.categories") | group_by(attribute="taxonomies.categories.0") -%}
+    {% for category,posts in section.pages | filter(attribute="taxonomies.series") | group_by(attribute="taxonomies.series.0") -%}
     <div class="title">{{ category }}</div>
     <div class="post-list">
         {% for post in posts | slice(end=section.extra.show_post_num) -%}

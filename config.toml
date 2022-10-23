@@ -9,7 +9,7 @@ minify_html = false
 build_search_index = false
 generate_feed = false
 feed_filename = "feed.xml"
-taxonomies = [{ name = "tags" }, { name = "categories" }]
+taxonomies = [{ name = "tags" }, { name = "series" }]
 ignored_content = ["*.mmd"]
 
 [markdown]
@@ -77,9 +77,6 @@ footer_credits = true
 
 comment = "utterances"
 analytics = "none"
-
-[extra.cloudflare_web_analytics]
-token = "xxxxxxxx"
 
 [extra.utterances]
 repo = "musikid/musikid.github.io"
