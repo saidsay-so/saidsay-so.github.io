@@ -17,7 +17,7 @@ highlight_code = true
 extra_syntaxes = []
 highlight_theme = "css"
 highlight_themes_css = [
-  { theme = "ayu-mirage", filename = "syntax-theme-dark.css" },
+  { theme = "ayu-dark", filename = "syntax-theme-dark.css" },
   { theme = "ayu-light", filename = "syntax-theme-light.css" },
 ]
 render_emoji = true
