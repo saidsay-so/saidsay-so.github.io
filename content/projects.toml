@@ -1,16 +1,38 @@
 [[project]]
+name = "pjdfstest.rs"
+# img = "https://github.com/musikid/pjdfstest/raw/main/assets/logo.svg?raw=true"
+summary = "Rewrite of the pjdfstest suite in Rust."
+desc = """
+The pjdfstest suite is a test suite for POSIX file systems.
+It is used by the FreeBSD
+project to test file systems like UFS or ZFS. 
+For the 
+[Google Summer of Code 2022](https://summerofcode.withgoogle.com/programs/2022/projects/6XPYWLzJ), 
+my project was to rewrite the test suite in Rust,
+with the goal of improving various aspects of it,
+like its performance or configurability,
+which are better explained in the [blog post](/blog/rewrite-pjdfstest).
+"""
+techs = ["Rust", "FreeBSD", "GSoC 2022"]
+links = [
+	{ name = "Blog post", url = "/blog/rewrite-pjdfstest" },
+	{ name = "GitHub", url = "https://github.com/musikid/pjdfstest" },
+	{ name = "Book", url = "https://musikid.github.io/pjdfstest" },
+]
+
+[[project]]
 name = "chwitter"
 img = "https://github.com/musikid/chwitter/raw/main/assets/logo.svg?raw=true"
 summary = "Twitter, but it's lame."
 desc = """
 A website similar to Twitter, with fewer functionalities.
-The implemented features are messages liking, search function, friends management, 
-light/dark mode, messages creation and profile editing.
+The implemented features are messages liking, search function,
+friends management, light/dark mode, messages creation and profile editing.
 """
 techs = ["HTML", "CSS", "TypeScript", "React", "Node.js", "Express", "MongoDB"]
 links = [
-	{name = "GitHub", url = "https://github.com/musikid/chwitter"},
-	{name = "Live instance", url = "https://musikid.github.io/chwitter"}
+	{ name = "GitHub", url = "https://github.com/musikid/chwitter" },
+	{ name = "Live instance", url = "https://musikid.github.io/chwitter" },
 ]
 
 [[project]]
@@ -22,9 +44,7 @@ Ethernet frame analyzer written for a school project.
 Recognizes DNS, DHCP, UDP and Ethernet protocols.
 """
 techs = ["Java"]
-links = [
-	{name = "GitHub", url = "https://github.com/musikid/wirecheap"},
-]
+links = [{ name = "GitHub", url = "https://github.com/musikid/wirecheap" }]
 
 [[project]]
 name = "Fancy"
@@ -38,6 +58,6 @@ a CLI to send commands and a GUI (WIP).
 """
 techs = ["Rust", "D-Bus"]
 links = [
-	{name = "GitHub", url = "https://github.com/musikid/fancy"},
-	{name = "Book", url = "https://musikid.github.io/fancy"}
+	{ name = "GitHub", url = "https://github.com/musikid/fancy" },
+	{ name = "Book", url = "https://musikid.github.io/fancy" },
 ]
