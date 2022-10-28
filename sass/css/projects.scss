@@ -13,6 +13,8 @@
     margin: 1rem 0;
 
     .meta {
+      display: flex;
+      flex-direction: column;
       flex: 3;
       .name {
         font-size: 1.3em;
@@ -32,6 +34,7 @@
       .desc {
         line-height: 1.5;
         margin: 0 0 10px 0;
+        flex: 1;
         a {
           color: var(--primary-color);
           text-decoration: underline var(--primary-light-color) 2px;
