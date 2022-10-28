@@ -1,5 +1,5 @@
 @mixin overflow-page($percentage: 15%) {
-  @media screen and (min-width: 1024px) {
+  @media screen and (min-width: 1280px) {
     left: calc(-#{$percentage} / 2);
     width: calc(100% + #{$percentage});
   }
@@ -159,7 +159,7 @@ article {
     border: 6px solid var(--primary-light-color);
     position: relative;
 
-    @include overflow-page();
+    @include overflow-page(40%);
 
     &::before {
       position: absolute;
