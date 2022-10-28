@@ -1,5 +1,14 @@
 @import "mixins";
 
+:root {
+  --homepage-margin-top: 10vh;
+  --homepage-max-width: 80vw;
+
+  @media screen and (min-width: 1024px) {
+    --homepage-max-width: 45vw;
+  }
+}
+
 main {
   margin: 0 auto;
   margin-top: var(--homepage-margin-top);
@@ -115,36 +124,6 @@ div.brief {
     background-color: var(--primary-light-color);
     height: 4px;
     margin: 1.5em 0;
-  }
-}
-
-@media screen and (max-width: 500px) {
-  main {
-    padding: 0 15px;
-    margin-top: 10vh;
-  }
-  div.info {
-    font-size: 1.2em;
-    img {
-      width: 70px;
-      height: 70px;
-      margin-right: 20px;
-    }
-    .info-text {
-      #name {
-        margin-right: 2px;
-      }
-      #id {
-      }
-    }
-  }
-  div.link {
-    .right a {
-      margin-right: 5px;
-    }
-  }
-  div.brief {
-    font-size: 1.3em;
   }
 }
 
