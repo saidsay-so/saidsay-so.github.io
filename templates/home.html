@@ -50,11 +50,11 @@
     </div>
   </div>
   <div class="brief">{{ section.content | trim | safe }}</div>
-  <div class="projects">
-    <h2><i class="ri-compasses-2-line ri-xl"></i> Projects</h2>
-    {% set data = load_data(path="content/projects.toml", format="toml") -%}
+  <h2><i class="ri-compasses-2-line ri-xl"></i> Projects</h2>
+  <section class="projects">
+    {% set data = load_data(path="projects.toml", format="toml") -%}
     {% for proj in data.project -%}
-    <div class="proj">
+    <article class="proj">
         <div class="meta">
           <h3 class="name">{{ proj.name }}</h3>
           <h4 class="summary">{{ proj.summary }}</h4>
@@ -75,9 +75,9 @@
           <img src="{{ proj.img }}" alt="{{ proj.name }}" />
         </div>
         {% endif %}
-    </div>
+    </article>
     {%- endfor %}
-  </div>
+  </section>
   {% include "_footer.html" %}
 </main>
 {% endblock content %}
