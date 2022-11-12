@@ -112,6 +112,23 @@
                   async>
           </script>
         {%- endif %}
+
+        {%- if show_comment and config.extra.comment == "giscus" %}
+          <script src="https://giscus.app/client.js"
+                  data-repo="{{ config.extra.giscus.repo }}"
+                  data-repo-id="{{ config.extra.giscus.repo_id }}"
+                  data-category="{{ config.extra.giscus.category }}"
+                  data-category-id="{{ config.extra.giscus.category_id }}"
+                  data-mapping="{{ config.extra.giscus.mapping }}"
+                  data-strict="0"
+                  data-reactions-enabled="{{ config.extra.giscus.reactions_enabled }}"
+                  data-emit-metadata="0"
+                  data-theme="{{ config.extra.giscus.theme }}"
+                  data-loading="lazy"
+                  crossorigin="anonymous"
+                  async>
+          </script>
+        {%- endif %}
     </main>
     <aside {% if config.extra.blur_effect %} class="blur" {% endif %}>
         {%- if page.extra.toc is defined %} {% set show_toc = page.extra.toc %}

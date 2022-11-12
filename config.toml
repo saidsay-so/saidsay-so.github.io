@@ -75,10 +75,19 @@ footer_copyright_year = "2022"
 # footer_custom = "xxxxxxxx"
 footer_credits = true
 
-comment = "utterances"
+comment = "giscus"
 analytics = "none"
 
 [extra.utterances]
 repo = "musikid/musikid.github.io"
 theme = "preferred-color-scheme"
 issue_term = "url"
+
+[extra.giscus]
+repo = "musikid/musikid.github.io"
+repo_id = "R_kgDOHYnJeQ"
+category = "Posts"
+category_id = "DIC_kwDOHYnJec4CShId"
+mapping = "title"
+reactions_enabled = "1"
+theme = "preferred_color_scheme"
