@@ -49,11 +49,11 @@ change time metadata when appropriated, succeed when they should, etc.
 It's particularly useful to test file systems, and mainly used to this effect.
 
 In fact, it was originally written by Pawel Jakub Dawidek to validate the ZFS port to FreeBSD,
-but it now supports multiple operating systems and file systems, while still 
+but it now supports multiple operating systems and file systems, while still
 primarily used by the FreeBSD project to test against UFS and ZFS file systems.
 
-Its tests are written in Shell script and relies on the TAP protocol to be executed, 
-with a C component to use syscalls from shell script, 
+Its tests are written in Shell script and relies on the TAP protocol to be executed,
+with a C component to use syscalls from shell script,
 which we are going to see in more detail in the next section.
 
 {% tip() %}
@@ -79,23 +79,23 @@ what should be tested is their implementations.
 #### `pjdfstest.c`
 
 This is where the `pjdfstest` program comes useful.
-It acts as a thin layer between syscalls and shell, by providing a 
+It acts as a thin layer between syscalls and shell, by providing a
 command-line interface similar to how these syscalls should be called in C.
-It returns the result on the standard output, 
+It returns the result on the standard output,
 whether that be a formatted one like for the `stat(2)` output,
 an error string when a syscall fails, or 0 when all went well.
 
-For example, to `unlink(2)` a file: `./pjdfstest unlink path` 
+For example, to `unlink(2)` a file: `./pjdfstest unlink path`
 which should return 0 if the file has been successfully deleted,
-or `ENOENT` for example if it doesn't exist. 
-The program isn't used directly by the test cases, 
+or `ENOENT` for example if it doesn't exist.
+The program isn't used directly by the test cases,
 but through the `expect` bash function.
 
 ### Test case
 
-The test cases are plain shell scripts which contains assertions. 
+The test cases are plain shell scripts which contains assertions.
 An assertion is a call to the `expect` bash function, which takes as parameters the expected output
-and the arguments to be forwarded to the `pjdfstest` binary. 
+and the arguments to be forwarded to the `pjdfstest` binary.
 The binary then executes the syscall and send its result back to the `expect` function,
 which compares the output with what's expected,
 and fails when it should.
@@ -154,14 +154,13 @@ but they still need a TAP harness for the assertions to work.
 They are usually executed through the `prove` harness
 (which is commonly included with `perl`).
 
-
 ##### Architecture's chart
 
 ![Chart of the original test suite architecture](arch-chart.png)
 
 ### Limitations
 
-This architecture has its advantages, 
+This architecture has its advantages,
 like readable tests or quick modifications,
 but several limitations also arise from it.
 
@@ -171,7 +170,7 @@ Some features (like `chflags(2)`) aren't systematically implemented on file syst
 often because they aren't part of the POSIX specification.
 To account this, the test suite has a concept of features.
 
-However, the supported configurations were hard coded 
+However, the supported configurations were hard coded
 in the test suite and consequently couldn't be easily configured,
 like with a configuration file or the command-line.
 
@@ -184,7 +183,7 @@ which hardly give feedback to the user that the test wasn't executed.
 A lot of assertions are written in a single file.
 This is due to the TAP-based approach which encourages large tests
 instead of small isolated ones, but also because it's harder
-to split and refactor a shell script. 
+to split and refactor a shell script.
 
 Another problem is that some tests needs privileges to be run.
 Because it assumes that the current user
@@ -210,7 +209,7 @@ Because it's written in shell, DRY (Don't Repeat Yourself) is difficult to achie
 This leads to a lot of duplication between the tests,
 with only a few lines changed between the files.
 This is particularly visible on the error tests,
-which share an enormous amount of code and yet aren't 
+which share an enormous amount of code and yet aren't
 factorized.
 
 #### TAP plan
@@ -222,10 +221,10 @@ I don't think that needs further elaboration...
 
 Performance is also one of the shortcomings.
 Because it's written in shell script,
-it takes almost 5 minutes (with one job) 
+it takes almost 5 minutes (with one job)
 to complete the suite, when it could be way less.
-One of the other reasons is that it contains many 1-second sleeps, 
-which could be smaller (depending on the file system timestamp granularity) 
+One of the other reasons is that it contains many 1-second sleeps,
+which could be smaller (depending on the file system timestamp granularity)
 if it had better configurability.
 
 {% info() %}
@@ -281,10 +280,10 @@ An experimental public [implementation](https://github.com/rust-lang/rust/issues
 is available on the Nightly channel,
 but relying on Nightly for a test suite was somewhat ironic
 and making harder to build the suite.
-Instead, we initially implemented an approach 
+Instead, we initially implemented an approach
 similar to [Criterion](https://github.com/bheisler/criterion.rs)'s one,
 where a test group (`criterion_group!`) is declared with the test
-cases. 
+cases.
 
 ##### Criterion example
 
@@ -312,7 +311,7 @@ criterion_main!(benches);
 ###### main.rs
 
 ```rust
-fn main() -> anyhow::Result<()> {    
+fn main() -> anyhow::Result<()> {
     for group in [chmod::tests] {
       ...
     }
@@ -346,17 +345,17 @@ pjdfs_test_case!(
 ...
 ```
 
-However, as we can see, it introduced a lot of boilerplate, 
+However, as we can see, it introduced a lot of boilerplate,
 so we finally decided to use the [`inventory`](https://github.com/dtolnay/inventory)
 crate.
 With it, we can collect the tests without having to declare
 a test group or a test case.
 
 We now just have to write the `crate::test_case!` macro,
-which collects the test function name with 
+which collects the test function name with
 a description (which is displayed to the user),
 while allowing parameterization of the test
-(to require preconditions or features, iterate over file types, 
+(to require preconditions or features, iterate over file types,
 specify that the test shouldn't be run in parallel, etc.).
 
 ##### main.rs
@@ -389,10 +388,10 @@ and `Socket` file types.
 ### Writing tests
 
 We now know how to collect the tests, but we still have to write them!
-Again, we investigated on how to do it best.
+Again, we investigated on how to do it.
 We wanted to write them like how Rust unit tests usually are.
-This means using the standard assertion macros 
-(`assert!`/`assert_eq!`/`assert_ne!`) and `unwrap`ing `Result`s.
+This means using the standard assertion macros
+(`assert!`) and `unwrap`ing `Result`s.
 
 ##### Unit test example (from [Rust by example](https://doc.rust-lang.org/rust-by-example/testing/unit_testing.html))
 
@@ -428,11 +427,9 @@ mod tests {
 ```
 
 This implies that the test functions will panic if something goes wrong.
-That's usually not a problem because the unit tests are compiled as individual binaries,
-so when one test panics, it doesn't stop others from running.
-
-But, in our case, the tests are handled by a unique runner.
-We don't want to stop running all the tests when one fails!
+Like with unit tests, which are compiled as one executable per module and
+executed in parallel,
+we don't want to stop running all the tests when one fails!
 This can be solved, by catching the panic
 with the help of [`std::panic::catch_unwind`](https://doc.rust-lang.org/std/panic/fn.catch_unwind.html).
 
@@ -442,7 +439,7 @@ fn main() {
     let tests = inventory::iter::<TestCase>;
     for test in tests {
         ...
-        // catch_unwind returns a Result, which is an Err if the 
+        // catch_unwind returns a Result, which is an Err if the
         // provided function panics
         // We provide a closure to catch_unwind
         let res = catch_unwind(|| {
@@ -467,6 +464,7 @@ If you want to break the test suite...
 [profile.release]
 panic = 'abort'
 ```
+
 {% end %}
 
 Now that we know how to write tests, we can start, right?
@@ -500,9 +498,9 @@ fn extend_file_shrink_sparse(ctx: &mut TestContext) {
 }
 ```
 
-That would be sufficient, if we don't consider that some tests 
+That would be sufficient, if we don't consider that some tests
 require functions which can affect the entire process,
-like [changing effective user](https://www.man7.org/linux/man-pages/man7/credentials.7.html) 
+like [changing effective user](https://www.man7.org/linux/man-pages/man7/credentials.7.html)
 or switching [umask](https://man7.org/linux/man-pages/man2/umask.2.html).
 We need to accommodate these cases if we want the runner to be able to run the tests
 in parallel in the future, hence the previously mentioned `serialized` keyword.
@@ -554,11 +552,11 @@ Run example:
 ```sh
 > pjdfstest -vc pjdfstest.toml chmod
 
-pjdfstest::tests::chmod::failed_chmod_unchanged_ctime::socket	
+pjdfstest::tests::chmod::failed_chmod_unchanged_ctime::socket
 	 chmod does not update ctime when it fails		success
-pjdfstest::tests::chmod::failed_chmod_unchanged_ctime::char	
+pjdfstest::tests::chmod::failed_chmod_unchanged_ctime::char
 	 chmod does not update ctime when it fails		success
-pjdfstest::tests::chmod::failed_chmod_unchanged_ctime::block	
+pjdfstest::tests::chmod::failed_chmod_unchanged_ctime::block
 
 ...
 
@@ -569,7 +567,7 @@ Which is clearer than:
 
 ```sh
 > prove -v tests/rename/00.t
-../tests/rename/00.t .. 
+../tests/rename/00.t ..
 1..122
 ok 1
 ok 2
@@ -586,7 +584,7 @@ Result: PASS
 ```
 
 The test suite also separates tests which require privileges
-and skip them if the user doesn't have the appropriated rights.
+and skips them if the user doesn't have the appropriated rights.
 
 ### Performance
 
@@ -594,12 +592,12 @@ This is probably the most exciting part and Rust doesn't disappoint on this one!
 
 ![Time comparison between original and rewrite](time-comparison.png)
 
-| Test suite | Time |
-|------------|------|
-| Original | 350s |
-| Original (8 jobs) | 139s |
-| Rewrite (1s sleep time) | 89s |
-| Rewrite (1ms sleep time) | 1s |
+| Test suite               | Time |
+| ------------------------ | ---- |
+| Original                 | 350s |
+| Original (8 jobs)        | 139s |
+| Rewrite (1s sleep time)  | 89s  |
+| Rewrite (1ms sleep time) | 1s   |
 
 > Tested on a FreeBSD laptop with 8 cores, on the ZFS file system.
 > The original test suite is executed with the `prove` TAP harness.
@@ -607,14 +605,13 @@ This is probably the most exciting part and Rust doesn't disappoint on this one!
 From these non-rigorous benchmarks, we can see that there is an important speed gap
 between the original test suite and its rewrite.
 
-
 With the rewrite, the entire test suite is executed in only one second!
 That's 139 times faster than the original with 8 jobs running, and 350 faster than the original with
 sequential tests!
 Even with 1-second sleeps, the rewrite is still 1.5 times faster than the original
-with 8 jobs running! 
+with 8 jobs running!
 
-It's now possible to manually specify a time for the sleeps. 
+It's now possible to manually specify a time for the sleeps.
 This greatly improves the speed, but this wasn't the only slowness factor.
 As explained earlier, the old architecture in general did have a high cost.
 We can see this with the rewrite remaining faster even with 1-second sleep time.
@@ -649,7 +646,7 @@ naptime = 0.001
 
 ### Debugging
 
-Because the rewrite is in Rust, standard debuggers 
+Because the rewrite is in Rust, standard debuggers
 (in particular `rust-lldb`) can be used.
 It's also easier to trace syscalls (with `strace` or `truss`),
 now that a single test function can be executed.
@@ -671,30 +668,30 @@ but the rewrite is already usable!
 ## Looking forward
 
 New functionalities can be implemented after the rewrite is done.
-They would improve the test suite integration 
+They would improve the test suite integration
 along with the experience for file system developers.
 
 ### ATF support
 
-The FreeBSD's test infrastructure is based on the 
-[Kyua](https://www.freebsd.org/cgi/man.cgi?query=kyua&sektion=1&apropos=0&manpath=FreeBSD+13.1-RELEASE+and+Ports) 
+The FreeBSD's test infrastructure is based on the
+[Kyua](https://www.freebsd.org/cgi/man.cgi?query=kyua&sektion=1&apropos=0&manpath=FreeBSD+13.1-RELEASE+and+Ports)
 test runner.
 It supports running framework-less and TAP test programs, but most importantly
 [ATF](https://www.freebsd.org/cgi/man.cgi?query=atf&apropos=0&sektion=0&manpath=FreeBSD+13.1-RELEASE+and+Ports&arch=default&format=html)
 -based tests.
 The ATF protocol greatly improve reporting for the test runner,
 by allowing to have test names and descriptions.
-It's fairly easy to implement it for our test runner, 
+It's fairly easy to implement it for our test runner,
 and it would drastically improve reporting on the FreeBSD CI.
 
 ### Parallelization
 
-For now, tests are executed sequentially. 
+For now, tests are executed sequentially.
 This isn't a real problem for file systems with sub-second timestamp
 granularity, but it is for the others.
 We can improve the speed by implementing parallelization,
 which would allow the runner to run multiple tests in parallel.
-The `serialized` tests would need to be run separately, 
+The `serialized` tests would need to be run separately,
 but there is enough tests which don't rely on it
 to justify implementing parallelization with a noticeable speed gain.
 
@@ -707,6 +704,7 @@ to provide filtering on file types or syscalls for example.
 ## Appendix
 
 Benchmark commands:
+
 ```sh
 > sudo hyperfine -i './target/release/pjdfstest -c pjdfstest.toml >/dev/null' 'prove -rvj8 ../tests >/dev/null'
 
