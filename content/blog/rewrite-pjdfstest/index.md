@@ -19,7 +19,7 @@ mermaid = false
 
 > Your proposal Rewrite PJDFSTest suite has been accepted by Org The FreeBSD Project for GSoC 2022.
 
-So, here we are! My proposal for the Google Summer of Code has been accepted,
+So, here we are! My [proposal](https://summerofcode.withgoogle.com/programs/2022/projects/6XPYWLzJ) for the Google Summer of Code has been accepted,
 and so start a long journey to rewrite this test suite!
 But what this project is about, why rewrite it in Rust anyway?
 
