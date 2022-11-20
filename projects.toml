@@ -36,15 +36,17 @@ links = [
 ]
 
 [[project]]
-name = "Wirecheap"
+name = "acpi_ec"
 img = ""
-summary = "Wireshark, but it's cheaper (and less good)."
+summary = "Get access to the Embedded Controller (EC) of your laptop."
 desc = """
-Ethernet frame analyzer written for a school project.
-Recognizes DNS, DHCP, UDP and Ethernet protocols.
+A simple kernel module which takes most of its code from `ec_sys.c`
+and provides an interface between the ACPI embedded controller and the userspace.
+Its original intent was to be used with NoteBook Fan Control and Fancy.
+You can access to the EC simply by read/write to `/dev/ec`.
 """
-techs = ["Java"]
-links = [{ name = "GitHub", url = "https://github.com/musikid/wirecheap" }]
+techs = ["C", "Linux", "Kernel module"]
+links = [{ name = "GitHub", url = "https://github.com/musikid/acpi_ec" }]
 
 [[project]]
 name = "Fancy"
