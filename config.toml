@@ -75,7 +75,7 @@ footer_copyright_year = "2022"
 # footer_custom = "xxxxxxxx"
 footer_credits = true
 
-comment = "giscus"
+comment = "none"
 analytics = "none"
 
 [extra.utterances]
