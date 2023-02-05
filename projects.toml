@@ -1,4 +1,14 @@
 [[project]]
+name = "gateau"
+summary = "Retrieving your browser's cookies will be a piece of cake!"
+desc = """
+gateau is a command line tool which imports your cookies from browsers 
+for your curl, wget and httpie requests.
+"""
+techs = ["Rust", "SQLite", "Firefox", "Chromium"]
+links = [{ name = "GitHub", url = "https://github.com/musikid/gateau" }]
+
+[[project]]
 name = "pjdfstest.rs"
 # img = "https://github.com/musikid/pjdfstest/raw/main/assets/logo.svg?raw=true"
 summary = "Rewrite of the pjdfstest suite in Rust."
