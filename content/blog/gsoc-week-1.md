@@ -23,5 +23,5 @@ The runner is in a very basic state but, it works.
 We also have test collection, through the `pjdfs_test_case` and
 `pjdfs_group` macros.
 The documentation, while being a big work-in-progress,
-is available [here](https://musikid.github.io/pjdfstest/).
+is available [here](https://saidsay-so.github.io/pjdfstest/).
 And we have the first tests written, for the `chmod` syscall.

@@ -1,6 +1,6 @@
 # The URL the site will be built for
-base_url = "https://musikid.github.io"
-title = "musikid"
+base_url = "https://saidsay-so.github.io"
+title = "saidsay-so"
 description = "A lazy developer's log"
 default_language = "en"
 output_dir = "public"
@@ -33,18 +33,18 @@ anchors = "on"
 
 [extra]
 name = "Sayafdine Said"
-id = "musikid"
+id = "saidsay-so"
 bio = "DevOps Cloud Engineer @ Société Générale | Student @ Sorbonne University"
-avatar = "https://github.com/musikid.png"
+avatar = "https://github.com/saidsay-so.png"
 
 show_id = true
 show_projects = true
 show_resume = true
 
 links = [
-  { name = "GitHub", icon = "ri-github-line", url = "https://github.com/musikid" },
+  { name = "GitHub", icon = "ri-github-line", url = "https://github.com/saidsay-so" },
   { name = "LinkedIn", icon = "ri-linkedin-line", url = "https://www.linkedin.com/in/sayafdine-said" },
-  { name = "Email", icon = "ri-mail-send-line", url = "mailto:musikid@outlook.com" },
+  { name = "Email", icon = "ri-mail-send-line", url = "mailto:sayafdine.said@outlook.fr" },
 ]
 
 #============== Icons ===============================================
@@ -79,12 +79,12 @@ comment = "none"
 analytics = "none"
 
 [extra.utterances]
-repo = "musikid/musikid.github.io"
+repo = "saidsay-so/saidsay-so.github.io"
 theme = "preferred-color-scheme"
 issue_term = "url"
 
 [extra.giscus]
-repo = "musikid/musikid.github.io"
+repo = "saidsay-so/saidsay-so.github.io"
 repo_id = "R_kgDOHYnJeQ"
 category = "Posts"
 category_id = "DIC_kwDOHYnJec4CShId"

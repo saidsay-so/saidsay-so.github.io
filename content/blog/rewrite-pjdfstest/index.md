@@ -39,7 +39,7 @@ to be created and the authors of the original test suite!
 
 ## Code
 
-The code is available on [GitHub](https://github.com/musikid/pjdfstest).
+The code is available on [GitHub](https://github.com/saidsay-so/pjdfstest).
 
 ## What is pjdfstest?
 

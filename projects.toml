@@ -6,11 +6,11 @@ gateau is a command line tool which imports your cookies from browsers
 for your curl, wget and httpie requests.
 """
 techs = ["Rust", "SQLite", "Firefox", "Chromium"]
-links = [{ name = "GitHub", url = "https://github.com/musikid/gateau" }]
+links = [{ name = "GitHub", url = "https://github.com/saidsay-so/gateau" }]
 
 [[project]]
 name = "pjdfstest.rs"
-# img = "https://github.com/musikid/pjdfstest/raw/main/assets/logo.svg?raw=true"
+# img = "https://github.com/saidsay-so/pjdfstest/raw/main/assets/logo.svg?raw=true"
 summary = "Rewrite of the pjdfstest suite in Rust."
 desc = """
 The pjdfstest suite is a test suite for POSIX file systems.
@@ -26,13 +26,13 @@ which are better explained in the [blog post](/blog/rewrite-pjdfstest).
 techs = ["Rust", "FreeBSD", "GSoC 2022"]
 links = [
 	{ name = "Blog post", url = "/blog/rewrite-pjdfstest" },
-	{ name = "GitHub", url = "https://github.com/musikid/pjdfstest" },
-	{ name = "Book", url = "https://musikid.github.io/pjdfstest" },
+	{ name = "GitHub", url = "https://github.com/saidsay-so/pjdfstest" },
+	{ name = "Book", url = "https://saidsay-so.github.io/pjdfstest" },
 ]
 
 [[project]]
 name = "chwitter"
-img = "https://github.com/musikid/chwitter/raw/main/assets/logo.svg?raw=true"
+img = "https://github.com/saidsay-so/chwitter/raw/main/assets/logo.svg?raw=true"
 summary = "Twitter, but it's lame."
 desc = """
 A website similar to Twitter, with fewer functionalities.
@@ -41,8 +41,8 @@ friends management, light/dark mode, messages creation and profile editing.
 """
 techs = ["HTML", "CSS", "TypeScript", "React", "Node.js", "Express", "MongoDB"]
 links = [
-	{ name = "GitHub", url = "https://github.com/musikid/chwitter" },
-	{ name = "Live instance", url = "https://musikid.github.io/chwitter" },
+	{ name = "GitHub", url = "https://github.com/saidsay-so/chwitter" },
+	{ name = "Live instance", url = "https://saidsay-so.github.io/chwitter" },
 ]
 
 [[project]]
@@ -56,11 +56,11 @@ Its original intent was to be used with NoteBook Fan Control and Fancy.
 You can access to the EC simply by read/write to `/dev/ec`.
 """
 techs = ["C", "Linux", "Kernel module"]
-links = [{ name = "GitHub", url = "https://github.com/musikid/acpi_ec" }]
+links = [{ name = "GitHub", url = "https://github.com/saidsay-so/acpi_ec" }]
 
 [[project]]
 name = "Fancy"
-img = "https://github.com/musikid/fancy/blob/develop/assets/logo.svg?raw=true"
+img = "https://github.com/saidsay-so/fancy/blob/develop/assets/logo.svg?raw=true"
 summary = "Control your laptop fans with a fancy software."
 desc = """
 Fancy is a software which allows controlling laptop fans.
@@ -70,6 +70,6 @@ a CLI to send commands and a GUI (WIP).
 """
 techs = ["Rust", "D-Bus"]
 links = [
-	{ name = "GitHub", url = "https://github.com/musikid/fancy" },
-	{ name = "Book", url = "https://musikid.github.io/fancy" },
+	{ name = "GitHub", url = "https://github.com/saidsay-so/fancy" },
+	{ name = "Book", url = "https://saidsay-so.github.io/fancy" },
 ]
