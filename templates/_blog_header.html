@@ -6,7 +6,7 @@
             <a id="go-home" href="/" aria-label="home" ><i class="{{ config.extra.home_icon }} ri-xl"></i></a>
             {% if config.extra.feed_in_blog_section -%}
             <a href="/blog/{{ config.feed_filename }}" aria-label="rss feed" ><i class="{{ config.extra.rss_icon }} ri-xl"></i></a>
-            {% elif config.generate_feed -%}
+            {% elif config.generate_feeds -%}
             <a href="/{{ config.feed_filename }}" aria-label="rss feed" ><i class="{{ config.extra.rss_icon }} ri-xl"></i></a>
             {% endif -%}
             <button id="color-toggle" aria-label="dark light mode switch"><i class="ri-moon-line ri-xl"></i></button>
