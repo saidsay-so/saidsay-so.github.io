@@ -76,12 +76,16 @@ footer_copyright_year = "2022"
 footer_credits = true
 
 comment = "none"
-analytics = "none"
+analytics = "umami"
 
 [extra.utterances]
 repo = "saidsay-so/saidsay-so.github.io"
 theme = "preferred-color-scheme"
 issue_term = "url"
+
+[extra.umami]
+website_id = "26f63597-f73c-42a0-83bd-b70b42451ca2"
+src = "https://cloud.umami.is/script.js"
 
 [extra.giscus]
 repo = "saidsay-so/saidsay-so.github.io"
