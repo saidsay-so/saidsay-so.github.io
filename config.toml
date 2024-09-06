@@ -34,7 +34,7 @@ anchors = "on"
 [extra]
 name = "Sayafdine Said"
 id = "saidsay-so"
-bio = "DevOps Cloud Engineer @ Société Générale | Student @ Sorbonne University"
+bio = "DevOps Cloud Engineer @ Société Générale"
 avatar = "https://github.com/saidsay-so.png"
 
 show_id = true
