@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>GSoC 2022: Week 6 report</title>
+    <meta name="description" content="">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Inter&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@2.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/var.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/header.css" />
+<link rel="stylesheet" href="/css/footer.css" />
+<link rel="stylesheet" href="/css/post.css" />
+    <script async defer data-website-id="26f63597-f73c-42a0-83bd-b70b42451ca2" src="https:&#x2F;&#x2F;cloud.umami.is&#x2F;script.js"></script>
+    
+    
+</head>
+
+<body>
+    <script>if(localStorage.getItem('theme')=='dark'){document.body.classList.add('dark-mode');}</script>
+    
+<header  class="blur" >
+    <div class="top">
+        <a class="header blog" href="/blog"><i class="ri-quill-pen-line ri-2x"></i><span>Blog</span></a>
+        <a class="back" href="/"><i class="ri-arrow-left-s-line ri-1x"></i><span>Home</span></a>
+        <div class="icon">
+            <a id="go-home" href="/" aria-label="home" ><i class="ri-user-6-line ri-xl"></i></a>
+            <a href="/blog/feed.xml" aria-label="rss feed" ><i class="ri-rss-line ri-xl"></i></a>
+            <button id="color-toggle" aria-label="dark light mode switch"><i class="ri-moon-line ri-xl"></i></button>
+            <button id="toc-toggle" aria-label="table of content"><i class="ri-menu-2-line ri-xl"></i></button>
+            </div>
+    </div>
+    <div id="progress-bar"></div>
+</header>
+
+<div class="wrap">
+    <div class="blank"></div>
+    <main>
+        <div id="top"></div>
+        <article>
+            <h1>GSoC 2022: Week 6 report</h1>
+            <div id="post-info">
+                <div class="date">
+                    <span id="publish">2022-07-29</span>
+                    </div>
+                <div class="tags">
+                    <a class="tag" href="https://saidsay-so.github.io/tags/gsoc"><i class="ri-hashtag ri-sm"></i><span>gsoc</span></a><a class="tag" href="https://saidsay-so.github.io/tags/gsoc2022"><i class="ri-hashtag ri-sm"></i><span>gsoc2022</span></a><a class="tag" href="https://saidsay-so.github.io/tags/pjdfstest"><i class="ri-hashtag ri-sm"></i><span>pjdfstest</span></a><a class="tag" href="https://saidsay-so.github.io/tags/rust"><i class="ri-hashtag ri-sm"></i><span>rust</span></a>
+                </div>
+            </div>    
+
+            <blockquote id="outdate_warn" class="note hidden" data-days="365"
+                data-text1="Note: This article was last updated " data-text2=" days ago and may be out of date.">
+                <i class="ri-alarm-warning-line ri-lg"></i><span></span>
+            </blockquote>
+            
+            <p>This last week, not a lot of features have been implemented. Support
+for creating file in CWD by default or an optional provided path has
+been added to the test runner.
+However, a lot of tests concerning errors have been added. Tests now
+include ELOOP, ENOTDIR, EINVAL, EISDIR, ENAMETOOLONG, EEXIST, EACCES
+and ENOENT.</p>
+
+        </article>
+    </main>
+    <aside  class="blur" > 
+        <a id="back-to-top" aria-label="back to top" href="#top"><i class="ri-arrow-up-s-line ri-2x"></i></a>
+    </aside>
+</div>
+<footer>
+    <div class="copyright">
+        Copyright © 2022 Sayafdine Said. All rights reserved.
+    </div>
+    <div class="credits">
+        <span>Powered by <a href="https://www.getzola.org/" target="_blank" rel='noreferrer noopener'>Zola</a> and <a href="https://github.com/isunjn/serene" target="_blank" rel='noreferrer noopener'>Serene</a></span>
+    </div>
+</footer>
+<script src="/js/dark.js"></script>  
+<script src="/js/outdate.js"></script> 
+<script src="/js/toc.js"></script>
+<script src="/js/progress.js"></script>
+<script src="/js/lightense.min.js"></script>
+<script src="/js/img.js"></script>
+</body>
+
+</html>
