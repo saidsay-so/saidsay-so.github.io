@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>Oxidizing FreeBSD&#x27;s file system test suite</title>
+    <meta name="description" content="&lt;p&gt;&lt;strong&gt;TL;DR More than 100× faster than the original, with more features and better configurability!&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Your proposal Rewrite PJDFSTest suite has been accepted by Org The FreeBSD Project for GSoC 2022.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;So, here we are! My &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;summerofcode.withgoogle.com&#x2F;programs&#x2F;2022&#x2F;projects&#x2F;6XPYWLzJ&quot;&gt;proposal&lt;&#x2F;a&gt; for the Google Summer of Code has been accepted,
+and so start a long journey to rewrite this test suite!
+But what this project is about, why rewrite it in Rust anyway?&lt;&#x2F;p&gt;">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Inter&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@2.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/var.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/header.css" />
+<link rel="stylesheet" href="/css/footer.css" />
+<link rel="stylesheet" href="/css/post.css" />
+    <script async defer data-website-id="26f63597-f73c-42a0-83bd-b70b42451ca2" src="https:&#x2F;&#x2F;cloud.umami.is&#x2F;script.js"></script>
+    
+    
+</head>
+
+<body>
+    <script>if(localStorage.getItem('theme')=='dark'){document.body.classList.add('dark-mode');}</script>
+    
+<header  class="blur" >
+    <div class="top">
+        <a class="header blog" href="/blog"><i class="ri-quill-pen-line ri-2x"></i><span>Blog</span></a>
+        <a class="back" href="/"><i class="ri-arrow-left-s-line ri-1x"></i><span>Home</span></a>
+        <div class="icon">
+            <a id="go-home" href="/" aria-label="home" ><i class="ri-user-6-line ri-xl"></i></a>
+            <a href="/blog/feed.xml" aria-label="rss feed" ><i class="ri-rss-line ri-xl"></i></a>
+            <button id="color-toggle" aria-label="dark light mode switch"><i class="ri-moon-line ri-xl"></i></button>
+            <button id="toc-toggle" aria-label="table of content"><i class="ri-menu-2-line ri-xl"></i></button>
+            </div>
+    </div>
+    <div id="progress-bar"></div>
+</header>
+
+<div class="wrap">
+    <div class="blank"></div>
+    <main>
+        <div id="top"></div>
+        <article>
+            <h1>Oxidizing FreeBSD&#x27;s file system test suite</h1>
+            <div id="post-info">
+                <div class="date">
+                    <span id="publish">2022-09-12</span>
+                    </div>
+                <div class="tags">
+                    <a class="tag" href="https://saidsay-so.github.io/tags/gsoc"><i class="ri-hashtag ri-sm"></i><span>gsoc</span></a><a class="tag" href="https://saidsay-so.github.io/tags/gsoc2022"><i class="ri-hashtag ri-sm"></i><span>gsoc2022</span></a><a class="tag" href="https://saidsay-so.github.io/tags/pjdfstest"><i class="ri-hashtag ri-sm"></i><span>pjdfstest</span></a><a class="tag" href="https://saidsay-so.github.io/tags/rust"><i class="ri-hashtag ri-sm"></i><span>rust</span></a>
+                </div>
+            </div>    
+
+            <blockquote id="outdate_warn" class="note hidden" data-days="365"
+                data-text1="Note: This article was last updated " data-text2=" days ago and may be out of date.">
+                <i class="ri-alarm-warning-line ri-lg"></i><span></span>
+            </blockquote>
+            
+            <p><strong>TL;DR More than 100× faster than the original, with more features and better configurability!</strong></p>
+<blockquote>
+<p>Your proposal Rewrite PJDFSTest suite has been accepted by Org The FreeBSD Project for GSoC 2022.</p>
+</blockquote>
+<p>So, here we are! My <a rel="noopener nofollow noreferrer" target="_blank" href="https://summerofcode.withgoogle.com/programs/2022/projects/6XPYWLzJ">proposal</a> for the Google Summer of Code has been accepted,
+and so start a long journey to rewrite this test suite!
+But what this project is about, why rewrite it in Rust anyway?</p>
+<span id="continue-reading"></span>
+<p>In this post, I will answer to these questions,
+by explaining what is the project,
+its current shortcomings and how rewriting it in Rust has solved them.</p>
+<h2 id="thanks">Thanks
+<a class="anchor ri-links-line" href="#thanks"></a>
+</h2>
+<p>These introductory words are to thank my mentor <a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/asomers">Alan Somers</a>,
+for accepting the proposal, helping and guiding me through this journey!
+His high availability and his contributions helped me a lot to do this project!
+I also want to thank all the crate maintainers who allowed this project
+to be created and the authors of the original test suite!</p>
+<h2 id="code">Code
+<a class="anchor ri-links-line" href="#code"></a>
+</h2>
+<p>The code is available on <a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/saidsay-so/pjdfstest">GitHub</a>.</p>
+<h2 id="what-is-pjdfstest">What is pjdfstest?
+<a class="anchor ri-links-line" href="#what-is-pjdfstest"></a>
+</h2>
+<p>First, <a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/pjd/pjdfstest">pjdfstest</a> is a test suite for POSIX system calls.
+It checks that they behave correctly according to the specification, e.g. return the right errors,
+change time metadata when appropriated, succeed when they should, etc.
+It’s particularly useful to test file systems, and mainly used to this effect.</p>
+<p>In fact, it was originally written by Pawel Jakub Dawidek to validate the ZFS port to FreeBSD,
+but it now supports multiple operating systems and file systems, while still
+primarily used by the FreeBSD project to test against UFS and ZFS file systems.</p>
+<p>Its tests are written in Shell script and relies on the TAP protocol to be executed,
+with a C component to use syscalls from shell script,
+which we are going to see in more detail in the next section.</p>
+<blockquote class="note tip">
+    <i class="ri-lightbulb-line ri-lg"></i>
+    <div class="content">
+        
+        <p><a rel="noopener nofollow noreferrer" target="_blank" href="https://testanything.org/">TAP</a> is a simple protocol for test reports.</p>
+
+    </div>
+</blockquote><blockquote class="note info">
+    <i class="ri-information-line ri-lg"></i>
+    <div class="content">
+        
+        <p>Even if it’s supposed to test POSIX syscalls,
+some non-standardized like <code>chflags(2)</code> are tested as well.</p>
+
+    </div>
+</blockquote><h3 id="architecture">Architecture
+<a class="anchor ri-links-line" href="#architecture"></a>
+</h3>
+<p>Like explained earlier, the main language for the test suite is Shell script.
+This is a high-level language, available on multiple platforms
+and with a simple syntax if we consider the POSIX-compatible subset.</p>
+<p>However, it’s impossible to rely solely on it to test syscalls since
+it doesn’t have bindings to call these functions directly.
+Even if most syscalls have binaries counterparts,
+what should be tested is their implementations.</p>
+<h4 id="pjdfstest-c"><code>pjdfstest.c</code></h4>
+<p>This is where the <code>pjdfstest</code> program comes useful.
+It acts as a thin layer between syscalls and shell, by providing a
+command-line interface similar to how these syscalls should be called in C.
+It returns the result on the standard output,
+whether that be a formatted one like for the <code>stat(2)</code> output,
+an error string when a syscall fails, or 0 when all went well.</p>
+<p>For example, to <code>unlink(2)</code> a file: <code>./pjdfstest unlink path</code>
+which should return 0 if the file has been successfully deleted,
+or <code>ENOENT</code> for example if it doesn’t exist.
+The program isn’t used directly by the test cases,
+but through the <code>expect</code> bash function.</p>
+<h3 id="test-case">Test case
+<a class="anchor ri-links-line" href="#test-case"></a>
+</h3>
+<p>The test cases are plain shell scripts which contains assertions.
+An assertion is a call to the <code>expect</code> bash function, which takes as parameters the expected output
+and the arguments to be forwarded to the <code>pjdfstest</code> binary.
+The binary then executes the syscall and send its result back to the <code>expect</code> function,
+which compares the output with what’s expected,
+and fails when it should.</p>
+<p>The typical shape of a test case is:</p>
+<ul>
+<li>Description</li>
+<li>Feature support</li>
+<li>TAP plan</li>
+<li>Assertions</li>
+</ul>
+<p>Example:</p>
+<h5 id="tests-chflags-11-t">tests/chflags/11.t</h5>
+<pre data-lang="bash" class="language-bash z-code"><code class="language-bash" data-lang="bash"><span class="z-source z-shell z-bash"><span class="z-comment z-line z-number-sign z-shell"><span class="z-punctuation z-definition z-comment z-begin z-shell">#</span></span><span class="z-comment z-line z-number-sign z-shell"> Description</span><span class="z-comment z-line z-number-sign z-shell">
+</span></span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-variable z-other z-readwrite z-assignment z-shell">desc</span><span class="z-keyword z-operator z-assignment z-shell">=</span><span class="z-string z-unquoted z-shell"><span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span>chflags returns EPERM if a user tries to set or remove the SF_SNAPSHOT flag<span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span></span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-variable z-other z-readwrite z-assignment z-shell">dir</span><span class="z-keyword z-operator z-assignment z-shell">=</span><span class="z-meta z-function-call z-shell"></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-meta z-group z-expansion z-command z-backticks z-shell"><span class="z-punctuation z-section z-group z-begin z-shell">`</span><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">dirname</span></span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-variable z-other z-readwrite z-shell">0</span></span></span><span class="z-punctuation z-section z-group z-end z-shell">`</span></span></span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-support z-function z-dot z-shell">.</span></span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-punctuation z-section z-expansion z-parameter z-begin z-shell">{</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-variable z-other z-readwrite z-shell">dir</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-section z-expansion z-parameter z-end z-shell">}</span></span>/../misc.sh</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-comment z-line z-number-sign z-shell"><span class="z-punctuation z-definition z-comment z-begin z-shell">#</span></span><span class="z-comment z-line z-number-sign z-shell"> Check feature support</span><span class="z-comment z-line z-number-sign z-shell">
+</span></span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">require</span></span><span class="z-meta z-function-call z-arguments z-shell"> chflags_SF_SNAPSHOT</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-comment z-line z-number-sign z-shell"><span class="z-punctuation z-definition z-comment z-begin z-shell">#</span></span><span class="z-comment z-line z-number-sign z-shell"> TAP plan</span><span class="z-comment z-line z-number-sign z-shell">
+</span></span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-support z-function z-echo z-shell">echo</span></span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span>1..145<span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span></span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-comment z-line z-number-sign z-shell"><span class="z-punctuation z-definition z-comment z-begin z-shell">#</span></span><span class="z-comment z-line z-number-sign z-shell"> Assertions</span><span class="z-comment z-line z-number-sign z-shell">
+</span></span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-variable z-other z-readwrite z-assignment z-shell">n0</span><span class="z-keyword z-operator z-assignment z-shell">=</span><span class="z-meta z-function-call z-shell"></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-meta z-group z-expansion z-command z-backticks z-shell"><span class="z-punctuation z-section z-group z-begin z-shell">`</span><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">namegen</span></span><span class="z-punctuation z-section z-group z-end z-shell">`</span></span></span>
+</span><span class="z-source z-shell z-bash"><span class="z-variable z-other z-readwrite z-assignment z-shell">n1</span><span class="z-keyword z-operator z-assignment z-shell">=</span><span class="z-meta z-function-call z-shell"></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-meta z-group z-expansion z-command z-backticks z-shell"><span class="z-punctuation z-section z-group z-begin z-shell">`</span><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">namegen</span></span><span class="z-punctuation z-section z-group z-end z-shell">`</span></span></span>
+</span><span class="z-source z-shell z-bash"><span class="z-variable z-other z-readwrite z-assignment z-shell">n2</span><span class="z-keyword z-operator z-assignment z-shell">=</span><span class="z-meta z-function-call z-shell"></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-meta z-group z-expansion z-command z-backticks z-shell"><span class="z-punctuation z-section z-group z-begin z-shell">`</span><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">namegen</span></span><span class="z-punctuation z-section z-group z-end z-shell">`</span></span></span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">expect</span></span><span class="z-meta z-function-call z-arguments z-shell"> 0 mkdir <span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-punctuation z-section z-expansion z-parameter z-begin z-shell">{</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-variable z-other z-readwrite z-shell">n0</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-section z-expansion z-parameter z-end z-shell">}</span></span> 0755</span>
+</span><span class="z-source z-shell z-bash"><span class="z-variable z-other z-readwrite z-assignment z-shell">cdir</span><span class="z-keyword z-operator z-assignment z-shell">=</span><span class="z-meta z-function-call z-shell"></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-meta z-group z-expansion z-command z-backticks z-shell"><span class="z-punctuation z-section z-group z-begin z-shell">`</span><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">pwd</span></span><span class="z-punctuation z-section z-group z-end z-shell">`</span></span></span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-support z-function z-cd z-shell">cd</span></span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-punctuation z-section z-expansion z-parameter z-begin z-shell">{</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-variable z-other z-readwrite z-shell">n0</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-section z-expansion z-parameter z-end z-shell">}</span></span></span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-keyword z-control z-loop z-for z-shell">for</span><span class="z-meta z-group z-for z-shell"> type <span class="z-keyword z-control z-in z-shell">in</span> regular dir fifo block char socket symlink</span><span class="z-keyword z-operator z-logical z-continue z-shell">;</span> <span class="z-keyword z-control z-loop z-do z-shell">do</span>
+</span><span class="z-source z-shell z-bash">	<span class="z-keyword z-control z-conditional z-if z-shell">if</span> <span class="z-support z-function z-test z-begin z-shell">[</span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-punctuation z-section z-expansion z-parameter z-begin z-shell">{</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-variable z-other z-readwrite z-shell">type</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-section z-expansion z-parameter z-end z-shell">}</span></span><span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span> <span class="z-keyword z-operator z-logical z-shell">!=</span> <span class="z-string z-quoted z-double z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&quot;</span>symlink<span class="z-punctuation z-definition z-string z-end z-shell">&quot;</span></span> <span class="z-support z-function z-test z-end z-shell">]</span></span><span class="z-keyword z-operator z-logical z-continue z-shell">;</span> <span class="z-keyword z-control z-conditional z-then z-shell">then</span>
+</span><span class="z-source z-shell z-bash">		<span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">create_file</span></span><span class="z-meta z-function-call z-arguments z-shell"> <span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-punctuation z-section z-expansion z-parameter z-begin z-shell">{</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-variable z-other z-readwrite z-shell">type</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-section z-expansion z-parameter z-end z-shell">}</span></span> <span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-punctuation z-section z-expansion z-parameter z-begin z-shell">{</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-variable z-other z-readwrite z-shell">n1</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-section z-expansion z-parameter z-end z-shell">}</span></span></span>
+</span><span class="z-source z-shell z-bash">		<span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">expect</span></span><span class="z-meta z-function-call z-arguments z-shell"> EPERM<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>u</span> 65534<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>g</span> 65534 chflags <span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-punctuation z-section z-expansion z-parameter z-begin z-shell">{</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-variable z-other z-readwrite z-shell">n1</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-section z-expansion z-parameter z-end z-shell">}</span></span> SF_SNAPSHOT</span>
+</span><span class="z-source z-shell z-bash">		<span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">expect</span></span><span class="z-meta z-function-call z-arguments z-shell"> none stat <span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-punctuation z-section z-expansion z-parameter z-begin z-shell">{</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-variable z-other z-readwrite z-shell">n1</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-section z-expansion z-parameter z-end z-shell">}</span></span> flags</span>
+</span><span class="z-source z-shell z-bash">		<span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">expect</span></span><span class="z-meta z-function-call z-arguments z-shell"> EPERM chflags <span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-definition z-variable z-shell">$</span><span class="z-punctuation z-section z-expansion z-parameter z-begin z-shell">{</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-variable z-other z-readwrite z-shell">n1</span></span><span class="z-meta z-group z-expansion z-parameter z-shell"><span class="z-punctuation z-section z-expansion z-parameter z-end z-shell">}</span></span> SF_SNAPSHOT</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">...</span></span>
+</span></code></pre>
+<h3 id="execution">Execution
+<a class="anchor ri-links-line" href="#execution"></a>
+</h3>
+<p>The cases are grouped in folders named after the syscall being tested.
+Since they’re shell scripts, the test cases could be launched directly,
+but they still need a TAP harness for the assertions to work.
+They are usually executed through the <code>prove</code> harness
+(which is commonly included with <code>perl</code>).</p>
+<h5 id="architecture-s-chart">Architecture’s chart</h5>
+<p><img src="https://saidsay-so.github.io/blog/rewrite-pjdfstest/arch-chart.png" alt="Chart of the original test suite architecture" /></p>
+<h3 id="limitations">Limitations
+<a class="anchor ri-links-line" href="#limitations"></a>
+</h3>
+<p>This architecture has its advantages,
+like readable tests or quick modifications,
+but several limitations also arise from it.</p>
+<h4 id="configurability">Configurability</h4>
+<p>Some features (like <code>chflags(2)</code>) aren’t systematically implemented on file systems,
+often because they aren’t part of the POSIX specification.
+To account this, the test suite has a concept of features.</p>
+<p>However, the supported configurations were hard coded
+in the test suite and consequently couldn’t be easily configured,
+like with a configuration file or the command-line.</p>
+<p>It also can’t skip tests correctly. The tests to be skipped just
+have their TAP plan rewritten to send “1..1\nok 1”,
+which hardly give feedback to the user that the test wasn’t executed.</p>
+<h4 id="isolation">Isolation</h4>
+<p>A lot of assertions are written in a single file.
+This is due to the TAP-based approach which encourages large tests
+instead of small isolated ones, but also because it’s harder
+to split and refactor a shell script.</p>
+<p>Another problem is that some tests needs privileges to be run.
+Because it assumes that the current user
+is the super-user and doesn’t make distinction with the parts requiring privileges,
+it’s impossible to know which parts fail because of the lack of rights.</p>
+<p>Also, given the lack of isolation between these assertions,
+it’s more difficult to debug errors.</p>
+<h4 id="debugging">Debugging</h4>
+<p>As a consequence of large test files,
+it’s difficult to understand what went wrong in case of failure.
+Also, writing tests in shell script made them easy to read
+and quick to modify,
+but paradoxically harder to debug, because there’s no sh debugger.
+The TAP output doesn’t help a lot because the number used to validate
+an assertion lacks context.</p>
+<h4 id="duplication">Duplication</h4>
+<p>Because it’s written in shell, DRY (Don’t Repeat Yourself) is difficult to achieve.
+This leads to a lot of duplication between the tests,
+with only a few lines changed between the files.
+This is particularly visible on the error tests,
+which share an enormous amount of code and yet aren’t
+factorized.</p>
+<h4 id="tap-plan">TAP plan</h4>
+<p>Each time a file is modified, its TAP plan needs to be recomputed manually.
+I don’t think that needs further elaboration…</p>
+<h4 id="performance">Performance</h4>
+<p>Performance is also one of the shortcomings.
+Because it’s written in shell script,
+it takes almost 5 minutes (with one job)
+to complete the suite, when it could be way less.
+One of the other reasons is that it contains many 1-second sleeps,
+which could be smaller (depending on the file system timestamp granularity)
+if it had better configurability.</p>
+<blockquote class="note info">
+    <i class="ri-information-line ri-lg"></i>
+    <div class="content">
+        
+        <p>1-second sleeps are useful to test if a time metadata has or hasn’t
+changed because of an operation.</p>
+
+    </div>
+</blockquote><h4 id="documentation">Documentation</h4>
+<p>The lack of documentation,
+even if it isn’t really hard to connect the dots,
+make harder for potential contributors to understand the
+code.</p>
+<h2 id="rewrite-it-in-rust">Rewrite it in Rust
+<a class="anchor ri-links-line" href="#rewrite-it-in-rust"></a>
+</h2>
+<p>With this rewrite, we aim to solve those limitations.
+Other languages have been considered, namely Python and Go.
+However, since we had a strong preference for Rust,
+the test suite got oxidized!</p>
+<p>In addition to solving the previously stated shortcomings,
+we want to write a Rust binary, which:</p>
+<ul>
+<li>is self-contained (embed all the tests),</li>
+<li>can execute the tests (with the test runner),</li>
+<li>can filter them according to configuration and runtime conditions,</li>
+</ul>
+<p>and not in the GSoC scope but good to have:</p>
+<ul>
+<li>run tests in parallel,</li>
+<li>get better reports on FreeBSD’s CI infrastructure with
+<a rel="noopener nofollow noreferrer" target="_blank" href="https://www.freebsd.org/cgi/man.cgi?query=atf&amp;apropos=0&amp;sektion=0&amp;manpath=FreeBSD+13.1-RELEASE+and+Ports&amp;arch=default&amp;format=html">ATF</a>
+metadata support.</li>
+</ul>
+<h3 id="test-collection">Test collection
+<a class="anchor ri-links-line" href="#test-collection"></a>
+</h3>
+<p>The first thing we had to think on is how to collect the tests.
+Since there isn’t a <code>pytest</code>-like package in Rust, we had to investigate
+on existing approaches.</p>
+<p>Since the result should be a binary, techniques based on <code>cargo test</code> were excluded.
+We wanted to go first with the standard Rust <code>#[test]</code> attribute to collect the functions,
+but the API is not public.</p>
+<blockquote class="note tip">
+    <i class="ri-lightbulb-line ri-lg"></i>
+    <div class="content">
+        
+        <p><a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/rust-lang/cargo">Cargo</a> is the Rust package manager.
+This isn’t its sole task, it can also launch unit tests, which are functions
+annotated with the <code>#[test]</code> attribute.</p>
+
+    </div>
+</blockquote>
+<p>An experimental public <a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/rust-lang/rust/issues/50297">implementation</a>
+is available on the Nightly channel,
+but relying on Nightly for a test suite was somewhat ironic
+and making harder to build the suite.
+Instead, we initially implemented an approach
+similar to <a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/bheisler/criterion.rs">Criterion</a>’s one,
+where a test group (<code>criterion_group!</code>) is declared with the test
+cases.</p>
+<h5 id="criterion-example">Criterion example</h5>
+<pre data-lang="rust" class="language-rust z-code"><code class="language-rust" data-lang="rust"><span class="z-source z-rust"><span class="z-keyword z-other z-rust">use</span> <span class="z-meta z-path z-rust">criterion<span class="z-punctuation z-accessor z-rust">::</span></span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>black_box<span class="z-punctuation z-separator z-rust">,</span> criterion_group<span class="z-punctuation z-separator z-rust">,</span> criterion_main<span class="z-punctuation z-separator z-rust">,</span> Criterion</span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span><span class="z-punctuation z-terminator z-rust">;</span>
+</span><span class="z-source z-rust">
+</span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-function z-rust"><span class="z-storage z-type z-function z-rust">fn</span> </span><span class="z-entity z-name z-function z-rust">fibonacci</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-begin z-rust">(</span><span class="z-variable z-parameter z-rust">n</span><span class="z-punctuation z-separator z-rust">:</span> <span class="z-storage z-type z-rust">u64</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-end z-rust">)</span></span></span></span><span class="z-meta z-function z-rust"> <span class="z-meta z-function z-return-type z-rust"><span class="z-punctuation z-separator z-rust">-&gt;</span> <span class="z-storage z-type z-rust">u64</span></span> </span><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-keyword z-control z-rust">match</span> n <span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust">        <span class="z-constant z-numeric z-integer z-decimal z-rust">0</span> <span class="z-keyword z-operator z-rust">=&gt;</span> <span class="z-constant z-numeric z-integer z-decimal z-rust">1</span><span class="z-punctuation z-separator z-rust">,</span>
+</span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust">        <span class="z-constant z-numeric z-integer z-decimal z-rust">1</span> <span class="z-keyword z-operator z-rust">=&gt;</span> <span class="z-constant z-numeric z-integer z-decimal z-rust">1</span><span class="z-punctuation z-separator z-rust">,</span>
+</span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust">        n <span class="z-keyword z-operator z-rust">=&gt;</span> <span class="z-support z-function z-rust">fibonacci</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span>n<span class="z-keyword z-operator z-arithmetic z-rust">-</span><span class="z-constant z-numeric z-integer z-decimal z-rust">1</span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span> <span class="z-keyword z-operator z-arithmetic z-rust">+</span> <span class="z-support z-function z-rust">fibonacci</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span>n<span class="z-keyword z-operator z-arithmetic z-rust">-</span><span class="z-constant z-numeric z-integer z-decimal z-rust">2</span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-separator z-rust">,</span>
+</span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust">    </span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"></span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span></span>
+</span><span class="z-source z-rust">
+</span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-function z-rust"><span class="z-storage z-type z-function z-rust">fn</span> </span><span class="z-entity z-name z-function z-rust">criterion_benchmark</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-begin z-rust">(</span><span class="z-variable z-parameter z-rust">c</span><span class="z-punctuation z-separator z-rust">:</span> <span class="z-keyword z-operator z-rust">&amp;</span><span class="z-storage z-modifier z-rust">mut</span> Criterion</span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-end z-rust">)</span></span></span></span><span class="z-meta z-function z-rust"> </span><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    c<span class="z-punctuation z-accessor z-dot z-rust">.</span><span class="z-support z-function z-rust">bench_function</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span><span class="z-string z-quoted z-double z-rust"><span class="z-punctuation z-definition z-string z-begin z-rust">&quot;</span>fib 20<span class="z-punctuation z-definition z-string z-end z-rust">&quot;</span></span><span class="z-punctuation z-separator z-rust">,</span> <span class="z-meta z-function z-closure z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-begin z-rust">|</span></span></span><span class="z-meta z-function z-closure z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-variable z-parameter z-rust">b</span><span class="z-punctuation z-section z-parameters z-end z-rust">|</span></span> </span><span class="z-meta z-function z-closure z-rust">b<span class="z-punctuation z-accessor z-dot z-rust">.</span><span class="z-support z-function z-rust">iter</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span><span class="z-meta z-function z-closure z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-begin z-rust">|</span></span></span><span class="z-meta z-function z-closure z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-end z-rust">|</span></span> </span><span class="z-meta z-function z-closure z-rust"><span class="z-support z-function z-rust">fibonacci</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span><span class="z-support z-function z-rust">black_box</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span><span class="z-constant z-numeric z-integer z-decimal z-rust">20</span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span></span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span></span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-terminator z-rust">;</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"></span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span></span>
+</span><span class="z-source z-rust">
+</span><span class="z-source z-rust"><span class="z-support z-macro z-rust">criterion_group!</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span>benches<span class="z-punctuation z-separator z-rust">,</span> criterion_benchmark</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-terminator z-rust">;</span>
+</span><span class="z-source z-rust"><span class="z-support z-macro z-rust">criterion_main!</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span>benches</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-terminator z-rust">;</span>
+</span></code></pre>
+<h5 id="initial-implementation">Initial implementation</h5>
+<h6 id="main-rs">main.rs</h6>
+<pre data-lang="rust" class="language-rust z-code"><code class="language-rust" data-lang="rust"><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-function z-rust"><span class="z-storage z-type z-function z-rust">fn</span> </span><span class="z-entity z-name z-function z-rust">main</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-begin z-rust">(</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-end z-rust">)</span></span></span></span><span class="z-meta z-function z-rust"> <span class="z-meta z-function z-return-type z-rust"><span class="z-punctuation z-separator z-rust">-&gt;</span> <span class="z-meta z-path z-rust">anyhow<span class="z-punctuation z-accessor z-rust">::</span></span><span class="z-meta z-generic z-rust"><span class="z-support z-type z-rust">Result</span><span class="z-punctuation z-definition z-generic z-begin z-rust">&lt;</span><span class="z-punctuation z-section z-group z-begin z-rust">(</span><span class="z-punctuation z-section z-group z-end z-rust">)</span><span class="z-punctuation z-definition z-generic z-end z-rust">&gt;</span></span></span> </span><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-keyword z-control z-rust">for</span> group <span class="z-keyword z-operator z-rust">in</span> <span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">[</span><span class="z-meta z-path z-rust">chmod<span class="z-punctuation z-accessor z-rust">::</span></span>tests<span class="z-punctuation z-section z-group z-end z-rust">]</span></span> <span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust">      <span class="z-keyword z-operator z-range z-rust">...</span>
+</span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust">    </span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-support z-type z-rust">Ok</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"></span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span></span>
+</span><span class="z-source z-rust">
+</span></code></pre>
+<h6 id="chmod-mod-rs">chmod/mod.rs</h6>
+<pre data-lang="rust" class="language-rust z-code"><code class="language-rust" data-lang="rust"><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-storage z-type z-module z-rust">mod</span> <span class="z-entity z-name z-module z-rust">errno</span><span class="z-punctuation z-terminator z-rust">;</span></span>
+</span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-storage z-type z-module z-rust">mod</span> <span class="z-entity z-name z-module z-rust">lchmod</span><span class="z-punctuation z-terminator z-rust">;</span></span>
+</span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-storage z-type z-module z-rust">mod</span> <span class="z-entity z-name z-module z-rust">permission</span><span class="z-punctuation z-terminator z-rust">;</span></span>
+</span><span class="z-source z-rust">
+</span><span class="z-source z-rust"><span class="z-keyword z-other z-rust">crate</span><span class="z-meta z-path z-rust"><span class="z-punctuation z-accessor z-rust">::</span></span>pjdfs_group<span class="z-keyword z-operator z-logical z-rust">!</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span>chmod<span class="z-punctuation z-terminator z-rust">;</span> <span class="z-meta z-path z-rust">permission<span class="z-punctuation z-accessor z-rust">::</span></span>test_case<span class="z-punctuation z-separator z-rust">,</span> <span class="z-meta z-path z-rust">errno<span class="z-punctuation z-accessor z-rust">::</span></span>test_case</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-terminator z-rust">;</span>
+</span></code></pre>
+<h6 id="chmod-permission-rs">chmod/permission.rs</h6>
+<pre data-lang="rust" class="language-rust z-code"><code class="language-rust" data-lang="rust"><span class="z-source z-rust"><span class="z-support z-macro z-rust">pjdfs_test_case!</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span>
+</span></span><span class="z-source z-rust"><span class="z-meta z-group z-rust">    permission<span class="z-punctuation z-separator z-rust">,</span>
+</span></span><span class="z-source z-rust"><span class="z-meta z-group z-rust">    <span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span> test<span class="z-punctuation z-separator z-rust">:</span> test_ctime<span class="z-punctuation z-separator z-rust">,</span> require_root<span class="z-punctuation z-separator z-rust">:</span> <span class="z-constant z-language z-rust">true</span> </span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span><span class="z-punctuation z-separator z-rust">,</span>
+</span></span><span class="z-source z-rust"><span class="z-meta z-group z-rust">    <span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span> test<span class="z-punctuation z-separator z-rust">:</span> test_change_perm<span class="z-punctuation z-separator z-rust">,</span> require_root<span class="z-punctuation z-separator z-rust">:</span> <span class="z-constant z-language z-rust">true</span> </span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span><span class="z-punctuation z-separator z-rust">,</span>
+</span></span><span class="z-source z-rust"><span class="z-meta z-group z-rust">    <span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span> test<span class="z-punctuation z-separator z-rust">:</span> test_failed_chmod_unchanged_ctime<span class="z-punctuation z-separator z-rust">,</span> require_root<span class="z-punctuation z-separator z-rust">:</span> <span class="z-constant z-language z-rust">true</span> </span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span><span class="z-punctuation z-separator z-rust">,</span>
+</span></span><span class="z-source z-rust"><span class="z-meta z-group z-rust">    <span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span> test<span class="z-punctuation z-separator z-rust">:</span> test_clear_isgid_bit </span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span>
+</span></span><span class="z-source z-rust"><span class="z-meta z-group z-rust"></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-terminator z-rust">;</span>
+</span><span class="z-source z-rust">
+</span><span class="z-source z-rust"><span class="z-keyword z-operator z-range z-rust">...</span>
+</span></code></pre>
+<p>However, as we can see, it introduced a lot of boilerplate,
+so we finally decided to use the <a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/dtolnay/inventory"><code>inventory</code></a>
+crate.
+With it, we can collect the tests without having to declare
+a test group or a test case.</p>
+<p>We now just have to write the <code>crate::test_case!</code> macro,
+which collects the test function name with
+a description (which is displayed to the user),
+while allowing parameterization of the test
+(to require preconditions or features, iterate over file types,
+specify that the test shouldn’t be run in parallel, etc.).</p>
+<h5 id="main-rs-1">main.rs</h5>
+<pre data-lang="rust" class="language-rust z-code"><code class="language-rust" data-lang="rust"><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-function z-rust"><span class="z-storage z-type z-function z-rust">fn</span> </span><span class="z-entity z-name z-function z-rust">main</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-begin z-rust">(</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-end z-rust">)</span></span></span></span><span class="z-meta z-function z-rust"> </span><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-storage z-type z-rust">let</span> tests <span class="z-keyword z-operator z-assignment z-rust">=</span> <span class="z-meta z-path z-rust">inventory<span class="z-punctuation z-accessor z-rust">::</span></span><span class="z-meta z-path z-rust">iter<span class="z-punctuation z-accessor z-rust">::</span></span><span class="z-meta z-generic z-rust"><span class="z-punctuation z-definition z-generic z-begin z-rust">&lt;</span>TestCase<span class="z-punctuation z-definition z-generic z-end z-rust">&gt;</span></span><span class="z-punctuation z-terminator z-rust">;</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"></span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span></span>
+</span></code></pre>
+<h5 id="tests-chmod-rs">tests/chmod.rs</h5>
+<pre data-lang="rust" class="language-rust z-code"><code class="language-rust" data-lang="rust"><span class="z-source z-rust"><span class="z-keyword z-other z-rust">crate</span><span class="z-meta z-path z-rust"><span class="z-punctuation z-accessor z-rust">::</span></span>test_case<span class="z-keyword z-operator z-logical z-rust">!</span> <span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span><span class="z-source z-rust"><span class="z-meta z-block z-rust">    <span class="z-comment z-line z-documentation z-rust"><span class="z-punctuation z-definition z-comment z-rust">///</span> chmod does not update ctime when it fails
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-block z-rust">    failed_chmod_unchanged_ctime<span class="z-punctuation z-separator z-rust">,</span> serialized<span class="z-punctuation z-separator z-rust">,</span> root <span class="z-keyword z-operator z-rust">=&gt;</span> <span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">[</span>Regular<span class="z-punctuation z-separator z-rust">,</span> Dir<span class="z-punctuation z-separator z-rust">,</span> Fifo<span class="z-punctuation z-separator z-rust">,</span> Block<span class="z-punctuation z-separator z-rust">,</span> Char<span class="z-punctuation z-separator z-rust">,</span> Socket<span class="z-punctuation z-section z-group z-end z-rust">]</span></span>
+</span></span><span class="z-source z-rust"><span class="z-meta z-block z-rust"></span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span>
+</span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-function z-rust"><span class="z-storage z-type z-function z-rust">fn</span> </span><span class="z-entity z-name z-function z-rust">failed_chmod_unchanged_ctime</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-begin z-rust">(</span><span class="z-variable z-parameter z-rust">ctx</span><span class="z-punctuation z-separator z-rust">:</span> <span class="z-keyword z-operator z-rust">&amp;</span><span class="z-storage z-modifier z-rust">mut</span> SerializedTestContext, <span class="z-variable z-parameter z-rust">f_type</span><span class="z-punctuation z-separator z-rust">:</span> FileType</span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-end z-rust">)</span></span></span></span><span class="z-meta z-function z-rust"> </span><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-keyword z-operator z-range z-rust">...</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"></span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span></span>
+</span></code></pre>
+<blockquote class="note info">
+    <i class="ri-information-line ri-lg"></i>
+    <div class="content">
+        
+        <p>Here, the test will not be executed in a parallel context (<code>serialized</code>),
+require privileges (<code>root</code>) and will be executed over the
+<code>Regular</code>, <code>Dir</code>, <code>Fifo</code>, <code>Block</code>, <code>Char</code>
+and <code>Socket</code> file types.</p>
+
+    </div>
+</blockquote><h3 id="writing-tests">Writing tests
+<a class="anchor ri-links-line" href="#writing-tests"></a>
+</h3>
+<p>We now know how to collect the tests, but we still have to write them!
+Again, we investigated on how to do it.
+We wanted to write them like how Rust unit tests usually are.
+This means using the standard assertion macros
+(<code>assert!</code>) and <code>unwrap</code>ing <code>Result</code>s.</p>
+<h5 id="unit-test-example-from-rust-by-example">Unit test example (from <a rel="noopener nofollow noreferrer" target="_blank" href="https://doc.rust-lang.org/rust-by-example/testing/unit_testing.html">Rust by example</a>)</h5>
+<pre data-lang="rust" class="language-rust z-code"><code class="language-rust" data-lang="rust"><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-function z-rust"><span class="z-storage z-modifier z-rust">pub</span> <span class="z-storage z-type z-function z-rust">fn</span> </span><span class="z-entity z-name z-function z-rust">add</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-begin z-rust">(</span><span class="z-variable z-parameter z-rust">a</span><span class="z-punctuation z-separator z-rust">:</span> <span class="z-storage z-type z-rust">i32</span>, <span class="z-variable z-parameter z-rust">b</span><span class="z-punctuation z-separator z-rust">:</span> <span class="z-storage z-type z-rust">i32</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-end z-rust">)</span></span></span></span><span class="z-meta z-function z-rust"> <span class="z-meta z-function z-return-type z-rust"><span class="z-punctuation z-separator z-rust">-&gt;</span> <span class="z-storage z-type z-rust">i32</span></span> </span><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    a <span class="z-keyword z-operator z-arithmetic z-rust">+</span> b
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"></span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span></span>
+</span><span class="z-source z-rust">
+</span><span class="z-source z-rust"><span class="z-comment z-line z-double-slash z-rust"><span class="z-punctuation z-definition z-comment z-rust">//</span> This is a really bad adding function, its purpose is to fail in this
+</span></span><span class="z-source z-rust"><span class="z-comment z-line z-double-slash z-rust"><span class="z-punctuation z-definition z-comment z-rust">//</span> example.
+</span></span><span class="z-source z-rust"><span class="z-meta z-annotation z-rust"><span class="z-punctuation z-definition z-annotation z-rust">#</span><span class="z-punctuation z-section z-group z-begin z-rust">[</span><span class="z-variable z-annotation z-rust">allow</span><span class="z-meta z-annotation z-parameters z-rust"><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span></span></span><span class="z-meta z-annotation z-parameters z-rust"><span class="z-meta z-group z-rust">dead_code</span></span><span class="z-meta z-annotation z-parameters z-rust"><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span></span><span class="z-punctuation z-section z-group z-end z-rust">]</span></span>
+</span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-function z-rust"><span class="z-storage z-type z-function z-rust">fn</span> </span><span class="z-entity z-name z-function z-rust">bad_add</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-begin z-rust">(</span><span class="z-variable z-parameter z-rust">a</span><span class="z-punctuation z-separator z-rust">:</span> <span class="z-storage z-type z-rust">i32</span>, <span class="z-variable z-parameter z-rust">b</span><span class="z-punctuation z-separator z-rust">:</span> <span class="z-storage z-type z-rust">i32</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-end z-rust">)</span></span></span></span><span class="z-meta z-function z-rust"> <span class="z-meta z-function z-return-type z-rust"><span class="z-punctuation z-separator z-rust">-&gt;</span> <span class="z-storage z-type z-rust">i32</span></span> </span><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    a <span class="z-keyword z-operator z-arithmetic z-rust">-</span> b
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"></span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span></span>
+</span><span class="z-source z-rust">
+</span><span class="z-source z-rust"><span class="z-meta z-annotation z-rust"><span class="z-punctuation z-definition z-annotation z-rust">#</span><span class="z-punctuation z-section z-group z-begin z-rust">[</span><span class="z-variable z-annotation z-rust">cfg</span><span class="z-meta z-annotation z-parameters z-rust"><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span></span></span><span class="z-meta z-annotation z-parameters z-rust"><span class="z-meta z-group z-rust">test</span></span><span class="z-meta z-annotation z-parameters z-rust"><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span></span><span class="z-punctuation z-section z-group z-end z-rust">]</span></span>
+</span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-storage z-type z-module z-rust">mod</span> <span class="z-entity z-name z-module z-rust">tests</span> <span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-meta z-block z-rust">    <span class="z-comment z-line z-double-slash z-rust"><span class="z-punctuation z-definition z-comment z-rust">//</span> Note this useful idiom: importing names from outer (for mod tests) scope.
+</span></span></span></span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-meta z-block z-rust">    <span class="z-keyword z-other z-rust">use</span> <span class="z-meta z-path z-rust"><span class="z-keyword z-other z-rust">super</span><span class="z-punctuation z-accessor z-rust">::</span></span><span class="z-keyword z-operator z-arithmetic z-rust">*</span><span class="z-punctuation z-terminator z-rust">;</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-meta z-block z-rust">
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-meta z-block z-rust">    <span class="z-meta z-annotation z-rust"><span class="z-punctuation z-definition z-annotation z-rust">#</span><span class="z-punctuation z-section z-group z-begin z-rust">[</span><span class="z-variable z-annotation z-rust">test</span><span class="z-punctuation z-section z-group z-end z-rust">]</span></span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-meta z-block z-rust">    <span class="z-meta z-function z-rust"><span class="z-meta z-function z-rust"><span class="z-storage z-type z-function z-rust">fn</span> </span><span class="z-entity z-name z-function z-rust">test_add</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-begin z-rust">(</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-end z-rust">)</span></span></span></span><span class="z-meta z-function z-rust"> </span><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span></span></span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">        <span class="z-support z-macro z-rust">assert_eq!</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span><span class="z-support z-function z-rust">add</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span><span class="z-constant z-numeric z-integer z-decimal z-rust">1</span><span class="z-punctuation z-separator z-rust">,</span> <span class="z-constant z-numeric z-integer z-decimal z-rust">2</span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-separator z-rust">,</span> <span class="z-constant z-numeric z-integer z-decimal z-rust">3</span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-terminator z-rust">;</span>
+</span></span></span></span></span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    </span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span></span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-meta z-block z-rust">
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-meta z-block z-rust">    <span class="z-meta z-annotation z-rust"><span class="z-punctuation z-definition z-annotation z-rust">#</span><span class="z-punctuation z-section z-group z-begin z-rust">[</span><span class="z-variable z-annotation z-rust">test</span><span class="z-punctuation z-section z-group z-end z-rust">]</span></span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-meta z-block z-rust">    <span class="z-meta z-function z-rust"><span class="z-meta z-function z-rust"><span class="z-storage z-type z-function z-rust">fn</span> </span><span class="z-entity z-name z-function z-rust">test_bad_add</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-begin z-rust">(</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-end z-rust">)</span></span></span></span><span class="z-meta z-function z-rust"> </span><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span></span></span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">        <span class="z-comment z-line z-double-slash z-rust"><span class="z-punctuation z-definition z-comment z-rust">//</span> This assert would fire and test will fail.
+</span></span></span></span></span></span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">        <span class="z-comment z-line z-double-slash z-rust"><span class="z-punctuation z-definition z-comment z-rust">//</span> Please note, that private functions can be tested too!
+</span></span></span></span></span></span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">        <span class="z-support z-macro z-rust">assert_eq!</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span><span class="z-support z-function z-rust">bad_add</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span><span class="z-constant z-numeric z-integer z-decimal z-rust">1</span><span class="z-punctuation z-separator z-rust">,</span> <span class="z-constant z-numeric z-integer z-decimal z-rust">2</span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-separator z-rust">,</span> <span class="z-constant z-numeric z-integer z-decimal z-rust">3</span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-terminator z-rust">;</span>
+</span></span></span></span></span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    </span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span></span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-module z-rust"><span class="z-meta z-block z-rust"></span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span></span>
+</span></code></pre>
+<p>This implies that the test functions will panic if something goes wrong.
+Like with unit tests, which are compiled as one executable per module and
+executed in parallel,
+we don’t want to stop running all the tests when one fails!
+This can be solved, by catching the panic
+with the help of <a rel="noopener nofollow noreferrer" target="_blank" href="https://doc.rust-lang.org/std/panic/fn.catch_unwind.html"><code>std::panic::catch_unwind</code></a>.</p>
+<pre data-lang="rust" class="language-rust z-code"><code class="language-rust" data-lang="rust"><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-function z-rust"><span class="z-storage z-type z-function z-rust">fn</span> </span><span class="z-entity z-name z-function z-rust">main</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-begin z-rust">(</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-end z-rust">)</span></span></span></span><span class="z-meta z-function z-rust"> </span><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-keyword z-operator z-range z-rust">...</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-storage z-type z-rust">let</span> tests <span class="z-keyword z-operator z-assignment z-rust">=</span> <span class="z-meta z-path z-rust">inventory<span class="z-punctuation z-accessor z-rust">::</span></span><span class="z-meta z-path z-rust">iter<span class="z-punctuation z-accessor z-rust">::</span></span><span class="z-meta z-generic z-rust"><span class="z-punctuation z-definition z-generic z-begin z-rust">&lt;</span>TestCase<span class="z-punctuation z-definition z-generic z-end z-rust">&gt;</span></span><span class="z-punctuation z-terminator z-rust">;</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-keyword z-control z-rust">for</span> test <span class="z-keyword z-operator z-rust">in</span> tests <span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust">        <span class="z-keyword z-operator z-range z-rust">...</span>
+</span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust">        <span class="z-comment z-line z-double-slash z-rust"><span class="z-punctuation z-definition z-comment z-rust">//</span> catch_unwind returns a Result, which is an Err if the
+</span></span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust">        <span class="z-comment z-line z-double-slash z-rust"><span class="z-punctuation z-definition z-comment z-rust">//</span> provided function panics
+</span></span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust">        <span class="z-comment z-line z-double-slash z-rust"><span class="z-punctuation z-definition z-comment z-rust">//</span> We provide a closure to catch_unwind
+</span></span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust">        <span class="z-storage z-type z-rust">let</span> res <span class="z-keyword z-operator z-assignment z-rust">=</span> <span class="z-support z-function z-rust">catch_unwind</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span><span class="z-meta z-function z-closure z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-begin z-rust">|</span></span></span><span class="z-meta z-function z-closure z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-end z-rust">|</span></span> </span><span class="z-meta z-function z-closure z-rust"><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span></span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-group z-rust"><span class="z-meta z-function z-closure z-rust"><span class="z-meta z-block z-rust">            <span class="z-storage z-type z-rust">let</span> ctx <span class="z-keyword z-operator z-assignment z-rust">=</span> <span class="z-keyword z-operator z-range z-rust">...</span><span class="z-punctuation z-terminator z-rust">;</span>
+</span></span></span></span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-group z-rust"><span class="z-meta z-function z-closure z-rust"><span class="z-meta z-block z-rust">            <span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span>test<span class="z-punctuation z-accessor z-dot z-rust">.</span>fun</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span>ctx</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span>
+</span></span></span></span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-group z-rust"><span class="z-meta z-function z-closure z-rust"><span class="z-meta z-block z-rust">        </span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span></span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-terminator z-rust">;</span>
+</span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust">
+</span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust">        <span class="z-keyword z-control z-rust">match</span> res <span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust">            <span class="z-support z-type z-rust">Ok</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span><span class="z-keyword z-operator z-rust">_</span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span> <span class="z-keyword z-operator z-rust">=&gt;</span> <span class="z-keyword z-operator z-range z-rust">...</span><span class="z-punctuation z-separator z-rust">,</span>
+</span></span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust">            <span class="z-support z-type z-rust">Err</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span>e</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span> <span class="z-keyword z-operator z-rust">=&gt;</span> <span class="z-keyword z-operator z-range z-rust">...</span><span class="z-punctuation z-separator z-rust">,</span>
+</span></span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust">        </span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span>
+</span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-block z-rust">    </span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"></span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span></span>
+</span></code></pre>
+<blockquote class="note wrong">
+    <i class="ri-close-circle-line ri-lg"></i>
+    <div class="content">
+        
+        <p>If you want to break the test suite…</p>
+<h6 id="cargo-toml">Cargo.toml</h6>
+<pre data-lang="toml" class="language-toml z-code"><code class="language-toml" data-lang="toml"><span class="z-source z-toml"><span class="z-punctuation z-definition z-table z-begin z-toml">[</span><span class="z-meta z-tag z-table z-toml"><span class="z-entity z-name z-table z-toml">profile</span><span class="z-punctuation z-separator z-table z-toml">.</span><span class="z-entity z-name z-table z-toml">release</span></span><span class="z-punctuation z-definition z-table z-end z-toml">]</span>
+</span><span class="z-source z-toml"><span class="z-meta z-tag z-key z-toml"><span class="z-entity z-name z-tag z-toml">panic</span></span> <span class="z-punctuation z-definition z-key-value z-toml">=</span> <span class="z-string z-quoted z-single z-literal z-toml"><span class="z-punctuation z-definition z-string z-begin z-toml">&#39;</span>abort<span class="z-punctuation z-definition z-string z-end z-toml">&#39;</span></span>
+</span></code></pre>
+
+    </div>
+</blockquote>
+<p>Now that we know how to write tests, we can start, right?
+Well, we can, if we don’t want isolation between tests
+(and so future support for parallelization).
+For example, almost all tests need to create files.
+If we don’t care about isolation, we could just create them
+in the current directory and call it a day.<br />
+But that wouldn’t work well in a parallel context,
+therefore we need to isolate the tests’ contexts from each other.
+We accomplish this by creating a temporary directory
+for each test function (which the original did manually),
+and by using the <code>TestContext</code> struct,
+which wraps the methods to create files inside the said directory
+and automatically clean up, among other things.</p>
+<h5 id="tests-truncate-rs">tests/truncate.rs</h5>
+<pre data-lang="rust" class="language-rust z-code"><code class="language-rust" data-lang="rust"><span class="z-source z-rust"><span class="z-keyword z-other z-rust">crate</span><span class="z-meta z-path z-rust"><span class="z-punctuation z-accessor z-rust">::</span></span>test_case<span class="z-keyword z-operator z-logical z-rust">!</span> <span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span><span class="z-source z-rust"><span class="z-meta z-block z-rust">    <span class="z-comment z-line z-documentation z-rust"><span class="z-punctuation z-definition z-comment z-rust">///</span> truncate should extend a file, and shrink a sparse file
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-block z-rust">    extend_file_shrink_sparse
+</span></span><span class="z-source z-rust"><span class="z-meta z-block z-rust"></span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span>
+</span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-function z-rust"><span class="z-storage z-type z-function z-rust">fn</span> </span><span class="z-entity z-name z-function z-rust">extend_file_shrink_sparse</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-begin z-rust">(</span><span class="z-variable z-parameter z-rust">ctx</span><span class="z-punctuation z-separator z-rust">:</span> <span class="z-keyword z-operator z-rust">&amp;</span><span class="z-storage z-modifier z-rust">mut</span> TestContext</span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-end z-rust">)</span></span></span></span><span class="z-meta z-function z-rust"> </span><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-comment z-line z-double-slash z-rust"><span class="z-punctuation z-definition z-comment z-rust">//</span> Create a file with the test context
+</span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-storage z-type z-rust">let</span> file <span class="z-keyword z-operator z-assignment z-rust">=</span> ctx<span class="z-punctuation z-accessor z-dot z-rust">.</span><span class="z-support z-function z-rust">create</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span><span class="z-meta z-path z-rust">FileType<span class="z-punctuation z-accessor z-rust">::</span></span>Regular</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-accessor z-dot z-rust">.</span><span class="z-support z-function z-rust">unwrap</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-terminator z-rust">;</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-storage z-type z-rust">let</span> size <span class="z-keyword z-operator z-assignment z-rust">=</span> <span class="z-constant z-numeric z-integer z-decimal z-rust">1234567</span><span class="z-punctuation z-terminator z-rust">;</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-support z-macro z-rust">assert!</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span><span class="z-support z-function z-rust">truncate</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span><span class="z-keyword z-operator z-bitwise z-rust">&amp;</span>file<span class="z-punctuation z-separator z-rust">,</span> size</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-accessor z-dot z-rust">.</span><span class="z-support z-function z-rust">is_ok</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-terminator z-rust">;</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-keyword z-operator z-range z-rust">...</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"></span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span></span>
+</span></code></pre>
+<p>That would be sufficient, if we don’t consider that some tests
+require functions which can affect the entire process,
+like <a rel="noopener nofollow noreferrer" target="_blank" href="https://www.man7.org/linux/man-pages/man7/credentials.7.html">changing effective user</a>
+or switching <a rel="noopener nofollow noreferrer" target="_blank" href="https://man7.org/linux/man-pages/man2/umask.2.html">umask</a>.
+We need to accommodate these cases if we want the runner to be able to run the tests
+in parallel in the future, hence the previously mentioned <code>serialized</code> keyword.
+It allows to annotate that a test case should be the only one running
+and provide functions which should be used only in this context.</p>
+<h5 id="tests-chmod-rs-1">tests/chmod.rs</h5>
+<blockquote class="note info">
+    <i class="ri-information-line ri-lg"></i>
+    <div class="content">
+        
+        <p>The function <code>SerializedTestContext::as_user</code> allows to change
+the effective user in a controlled manner.</p>
+
+    </div>
+</blockquote><pre data-lang="rust" class="language-rust z-code"><code class="language-rust" data-lang="rust"><span class="z-source z-rust"><span class="z-keyword z-other z-rust">crate</span><span class="z-meta z-path z-rust"><span class="z-punctuation z-accessor z-rust">::</span></span>test_case<span class="z-keyword z-operator z-logical z-rust">!</span> <span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>clear_isgid_bit<span class="z-punctuation z-separator z-rust">,</span> serialized<span class="z-punctuation z-separator z-rust">,</span> root</span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span>
+</span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-function z-rust"><span class="z-storage z-type z-function z-rust">fn</span> </span><span class="z-entity z-name z-function z-rust">clear_isgid_bit</span></span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-begin z-rust">(</span><span class="z-variable z-parameter z-rust">ctx</span><span class="z-punctuation z-separator z-rust">:</span> <span class="z-keyword z-operator z-rust">&amp;</span><span class="z-storage z-modifier z-rust">mut</span> SerializedTestContext</span><span class="z-meta z-function z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-end z-rust">)</span></span></span></span><span class="z-meta z-function z-rust"> </span><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-keyword z-operator z-range z-rust">...</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-comment z-line z-double-slash z-rust"><span class="z-punctuation z-definition z-comment z-rust">//</span> Get a dummy user
+</span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-storage z-type z-rust">let</span> user <span class="z-keyword z-operator z-assignment z-rust">=</span> ctx<span class="z-punctuation z-accessor z-dot z-rust">.</span><span class="z-support z-function z-rust">get_new_user</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-terminator z-rust">;</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-keyword z-operator z-range z-rust">...</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-comment z-line z-double-slash z-rust"><span class="z-punctuation z-definition z-comment z-rust">//</span> Change user, which affects the whole process and therefore
+</span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-comment z-line z-double-slash z-rust"><span class="z-punctuation z-definition z-comment z-rust">//</span> is only available with the `SerializedTestContext`
+</span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    ctx<span class="z-punctuation z-accessor z-dot z-rust">.</span><span class="z-support z-function z-rust">as_user</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span><span class="z-keyword z-operator z-bitwise z-rust">&amp;</span>user<span class="z-punctuation z-separator z-rust">,</span> <span class="z-support z-type z-rust">None</span><span class="z-punctuation z-separator z-rust">,</span> <span class="z-meta z-function z-closure z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-begin z-rust">|</span></span></span><span class="z-meta z-function z-closure z-rust"><span class="z-meta z-function z-parameters z-rust"><span class="z-punctuation z-section z-parameters z-end z-rust">|</span></span> </span><span class="z-meta z-function z-closure z-rust"><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-begin z-rust">{</span>
+</span></span></span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-group z-rust"><span class="z-meta z-function z-closure z-rust"><span class="z-meta z-block z-rust">        <span class="z-support z-function z-rust">chmod</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span><span class="z-keyword z-operator z-bitwise z-rust">&amp;</span>path<span class="z-punctuation z-separator z-rust">,</span> expected_mode</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-accessor z-dot z-rust">.</span><span class="z-support z-function z-rust">unwrap</span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-begin z-rust">(</span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-terminator z-rust">;</span>
+</span></span></span></span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"><span class="z-meta z-group z-rust"><span class="z-meta z-function z-closure z-rust"><span class="z-meta z-block z-rust">    </span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span></span></span><span class="z-meta z-group z-rust"><span class="z-punctuation z-section z-group z-end z-rust">)</span></span><span class="z-punctuation z-terminator z-rust">;</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust">    <span class="z-keyword z-operator z-range z-rust">...</span>
+</span></span></span><span class="z-source z-rust"><span class="z-meta z-function z-rust"><span class="z-meta z-block z-rust"></span><span class="z-meta z-block z-rust"><span class="z-punctuation z-section z-block z-end z-rust">}</span></span></span>
+</span></code></pre>
+<p>Thanks to the <code>nix</code> crate, we were able to use syscalls in Rust.
+With all this and a few other methods, we rewrote the test suite
+while solving the previous limitations.</p>
+<h2 id="what-s-new">What’s new?
+<a class="anchor ri-links-line" href="#what-s-new"></a>
+</h2>
+<h3 id="isolation-1">Isolation
+<a class="anchor ri-links-line" href="#isolation-1"></a>
+</h3>
+<p>Now, the assertions are grouped inside a test function,
+which allows filtering tests with improved granularity.
+It also improves reporting,
+now that assertions are in test functions with meaningful names
+and descriptions.</p>
+<p>Run example:</p>
+<pre data-lang="sh" class="language-sh z-code"><code class="language-sh" data-lang="sh"><span class="z-source z-shell z-bash"><span class="z-keyword z-operator z-assignment z-redirection z-shell">&gt;</span> pjdfstest <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">-vc</span></span><span class="z-meta z-function-call z-arguments z-shell"> pjdfstest.toml chmod</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">pjdfstest::tests::chmod::failed_chmod_unchanged_ctime::socket</span></span>
+</span><span class="z-source z-shell z-bash">	 <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">chmod</span></span><span class="z-meta z-function-call z-arguments z-shell"> does not update ctime when it fails		success</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">pjdfstest::tests::chmod::failed_chmod_unchanged_ctime::char</span></span>
+</span><span class="z-source z-shell z-bash">	 <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">chmod</span></span><span class="z-meta z-function-call z-arguments z-shell"> does not update ctime when it fails		success</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">pjdfstest::tests::chmod::failed_chmod_unchanged_ctime::block</span></span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">...</span></span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Tests:</span></span><span class="z-meta z-function-call z-arguments z-shell"> 0 failed, 0 skipped, 26 passed, 26 total</span>
+</span></code></pre>
+<p>Which is clearer than:</p>
+<pre data-lang="sh" class="language-sh z-code"><code class="language-sh" data-lang="sh"><span class="z-source z-shell z-bash"><span class="z-keyword z-operator z-assignment z-redirection z-shell">&gt;</span> prove <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">-v</span></span><span class="z-meta z-function-call z-arguments z-shell"> tests/rename/00.t</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">../tests/rename/00.t</span></span><span class="z-meta z-function-call z-arguments z-shell"> ..</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">1..122</span></span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">ok</span></span><span class="z-meta z-function-call z-arguments z-shell"> 1</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">ok</span></span><span class="z-meta z-function-call z-arguments z-shell"> 2</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">ok</span></span><span class="z-meta z-function-call z-arguments z-shell"> 3</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">ok</span></span><span class="z-meta z-function-call z-arguments z-shell"> 4</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">ok</span></span><span class="z-meta z-function-call z-arguments z-shell"> 5</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">ok</span></span><span class="z-meta z-function-call z-arguments z-shell"> 6</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">ok</span></span><span class="z-meta z-function-call z-arguments z-shell"> 7</span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">...</span></span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">ok</span></span>
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">All</span></span><span class="z-meta z-function-call z-arguments z-shell"> tests successful.</span>
+</span><span class="z-source z-shell z-bash"><span class="z-variable z-other z-readwrite z-assignment z-shell">Files</span><span class="z-keyword z-operator z-assignment z-shell">=</span><span class="z-string z-unquoted z-shell">1,</span> <span class="z-variable z-other z-readwrite z-assignment z-shell">Tests</span><span class="z-keyword z-operator z-assignment z-shell">=</span><span class="z-string z-unquoted z-shell">122,</span>  <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">8</span></span><span class="z-meta z-function-call z-arguments z-shell"> wallclock secs ( 0.04 usr  0.01 sys +  0.65 cusr  0.41 csys =  1.11 CPU</span><span class="z-meta z-function-call z-shell"></span>)
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Result:</span></span><span class="z-meta z-function-call z-arguments z-shell"> PASS</span>
+</span></code></pre>
+<p>The test suite also separates tests which require privileges
+and skips them if the user doesn’t have the appropriated rights.</p>
+<h3 id="performance-1">Performance
+<a class="anchor ri-links-line" href="#performance-1"></a>
+</h3>
+<p>This is probably the most exciting part and Rust doesn’t disappoint on this one!</p>
+<p><img src="https://saidsay-so.github.io/blog/rewrite-pjdfstest/time-comparison.png" alt="Time comparison between original and rewrite" /></p>
+<table><thead><tr><th>Test suite</th><th>Time</th></tr></thead><tbody>
+<tr><td>Original</td><td>350s</td></tr>
+<tr><td>Original (8 jobs)</td><td>139s</td></tr>
+<tr><td>Rewrite (1s sleep time)</td><td>89s</td></tr>
+<tr><td>Rewrite (1ms sleep time)</td><td>1s</td></tr>
+</tbody></table>
+<blockquote>
+<p>Tested on a FreeBSD laptop with 8 cores, on the ZFS file system.
+The original test suite is executed with the <code>prove</code> TAP harness.</p>
+</blockquote>
+<p>From these non-rigorous benchmarks, we can see that there is an important speed gap
+between the original test suite and its rewrite.</p>
+<p>With the rewrite, the entire test suite is executed in only one second!
+That’s 139 times faster than the original with 8 jobs running, and 350 faster than the original with
+sequential tests!
+Even with 1-second sleeps, the rewrite is still 1.5 times faster than the original
+with 8 jobs running!</p>
+<p>It’s now possible to manually specify a time for the sleeps.
+This greatly improves the speed, but this wasn’t the only slowness factor.
+As explained earlier, the old architecture in general did have a high cost.
+We can see this with the rewrite remaining faster even with 1-second sleep time.
+The rewrite doesn’t support running the tests in parallel yet, but it’s something
+that will definitely improve the speed with long sleep time.</p>
+<h3 id="configurability-1">Configurability
+<a class="anchor ri-links-line" href="#configurability-1"></a>
+</h3>
+<p>The test suite can optionally be configured with a configuration file,
+to specify what are the supported features or
+the minimum sleep time for file system to takes changes into account for example.</p>
+<h5 id="configuration-example">Configuration example</h5>
+<pre data-lang="toml" class="language-toml z-code"><code class="language-toml" data-lang="toml"><span class="z-source z-toml"><span class="z-comment z-line z-number-sign z-toml"><span class="z-punctuation z-definition z-comment z-toml">#</span> Configuration for the pjdfstest runner</span>
+</span><span class="z-source z-toml">
+</span><span class="z-source z-toml"><span class="z-comment z-line z-number-sign z-toml"><span class="z-punctuation z-definition z-comment z-toml">#</span> This section allows enabling file system specific features.</span>
+</span><span class="z-source z-toml"><span class="z-comment z-line z-number-sign z-toml"><span class="z-punctuation z-definition z-comment z-toml">#</span> Please see the book for more details.</span>
+</span><span class="z-source z-toml"><span class="z-comment z-line z-number-sign z-toml"><span class="z-punctuation z-definition z-comment z-toml">#</span> A list of these features is provided when executing the runner with `-l`.</span>
+</span><span class="z-source z-toml"><span class="z-punctuation z-definition z-table z-begin z-toml">[</span><span class="z-meta z-tag z-table z-toml"><span class="z-entity z-name z-table z-toml">features</span></span><span class="z-punctuation z-definition z-table z-end z-toml">]</span>
+</span><span class="z-source z-toml"><span class="z-comment z-line z-number-sign z-toml"><span class="z-punctuation z-definition z-comment z-toml">#</span> File flags can be specified for OS which supports them.</span>
+</span><span class="z-source z-toml"><span class="z-comment z-line z-number-sign z-toml"><span class="z-punctuation z-definition z-comment z-toml">#</span> file_flags = [&quot;UF_IMMUTABLE&quot;]</span>
+</span><span class="z-source z-toml">
+</span><span class="z-source z-toml"><span class="z-punctuation z-definition z-table z-begin z-toml">[</span><span class="z-meta z-tag z-table z-toml"><span class="z-entity z-name z-table z-toml">features</span><span class="z-punctuation z-separator z-table z-toml">.</span><span class="z-entity z-name z-table z-toml">posix_fallocate</span></span><span class="z-punctuation z-definition z-table z-end z-toml">]</span>
+</span><span class="z-source z-toml">
+</span><span class="z-source z-toml"><span class="z-punctuation z-definition z-table z-begin z-toml">[</span><span class="z-meta z-tag z-table z-toml"><span class="z-entity z-name z-table z-toml">settings</span></span><span class="z-punctuation z-definition z-table z-end z-toml">]</span>
+</span><span class="z-source z-toml"><span class="z-comment z-line z-number-sign z-toml"><span class="z-punctuation z-definition z-comment z-toml">#</span> naptime is the duration of various short sleeps.  It should be greater than</span>
+</span><span class="z-source z-toml"><span class="z-comment z-line z-number-sign z-toml"><span class="z-punctuation z-definition z-comment z-toml">#</span> the timestamp granularity of the file system under test.</span>
+</span><span class="z-source z-toml"><span class="z-meta z-tag z-key z-toml"><span class="z-entity z-name z-tag z-toml">naptime</span></span> <span class="z-punctuation z-definition z-key-value z-toml">=</span> <span class="z-constant z-numeric z-float z-toml">0.001</span>
+</span></code></pre>
+<h3 id="debugging-1">Debugging
+<a class="anchor ri-links-line" href="#debugging-1"></a>
+</h3>
+<p>Because the rewrite is in Rust, standard debuggers
+(in particular <code>rust-lldb</code>) can be used.
+It’s also easier to trace syscalls (with <code>strace</code> or <code>truss</code>),
+now that a single test function can be executed.</p>
+<h2 id="progress-status">Progress status
+<a class="anchor ri-links-line" href="#progress-status"></a>
+</h2>
+<p>At the time of writing, the test suite has (almost) been completely rewritten!
+The original test suite had more than 7400 lines split between 225 files.
+This rewrite includes more than 92% of the original test suite, the exception being
+some granular tests.
+We judged that it would take too much time to rewrite all of them accurately,
+especially because NFSv4 ACLs are really complicated (there is no written
+standard to check the expected behavior, we have to rely on the implementations)
+and the tests are actually incomplete.
+Otherwise, some tests still need to be merged,
+as we’ve refactored the error tests,
+but the rewrite is already usable!</p>
+<h2 id="looking-forward">Looking forward
+<a class="anchor ri-links-line" href="#looking-forward"></a>
+</h2>
+<p>New functionalities can be implemented after the rewrite is done.
+They would improve the test suite integration
+along with the experience for file system developers.</p>
+<h3 id="atf-support">ATF support
+<a class="anchor ri-links-line" href="#atf-support"></a>
+</h3>
+<p>The FreeBSD’s test infrastructure is based on the
+<a rel="noopener nofollow noreferrer" target="_blank" href="https://www.freebsd.org/cgi/man.cgi?query=kyua&amp;sektion=1&amp;apropos=0&amp;manpath=FreeBSD+13.1-RELEASE+and+Ports">Kyua</a>
+test runner.
+It supports running framework-less and TAP test programs, but most importantly
+<a rel="noopener nofollow noreferrer" target="_blank" href="https://www.freebsd.org/cgi/man.cgi?query=atf&amp;apropos=0&amp;sektion=0&amp;manpath=FreeBSD+13.1-RELEASE+and+Ports&amp;arch=default&amp;format=html">ATF</a>
+-based tests.
+The ATF protocol greatly improve reporting for the test runner,
+by allowing to have test names and descriptions.
+It’s fairly easy to implement it for our test runner,
+and it would drastically improve reporting on the FreeBSD CI.</p>
+<h3 id="parallelization">Parallelization
+<a class="anchor ri-links-line" href="#parallelization"></a>
+</h3>
+<p>For now, tests are executed sequentially.
+This isn’t a real problem for file systems with sub-second timestamp
+granularity, but it is for the others.
+We can improve the speed by implementing parallelization,
+which would allow the runner to run multiple tests in parallel.
+The <code>serialized</code> tests would need to be run separately,
+but there is enough tests which don’t rely on it
+to justify implementing parallelization with a noticeable speed gain.</p>
+<h3 id="command-line-improvements">Command-line improvements
+<a class="anchor ri-links-line" href="#command-line-improvements"></a>
+</h3>
+<p>Now that the test suite’s granularity has been improved,
+we can work on providing a better command-line interface,
+to provide filtering on file types or syscalls for example.</p>
+<h2 id="appendix">Appendix
+<a class="anchor ri-links-line" href="#appendix"></a>
+</h2>
+<p>Benchmark commands:</p>
+<pre data-lang="sh" class="language-sh z-code"><code class="language-sh" data-lang="sh"><span class="z-source z-shell z-bash"><span class="z-keyword z-operator z-assignment z-redirection z-shell">&gt;</span> sudo <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">hyperfine</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>i</span> <span class="z-string z-quoted z-single z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&#39;</span>./target/release/pjdfstest -c pjdfstest.toml &gt;/dev/null<span class="z-punctuation z-definition z-string z-end z-shell">&#39;</span></span> <span class="z-string z-quoted z-single z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&#39;</span>prove -rvj8 ../tests &gt;/dev/null<span class="z-punctuation z-definition z-string z-end z-shell">&#39;</span></span></span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Benchmark</span></span><span class="z-meta z-function-call z-arguments z-shell"> 1: ./target/release/pjdfstest<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>c</span> pjdfstest.toml <span class="z-keyword z-operator z-assignment z-redirection z-shell">&gt;</span>/dev/null</span>
+</span><span class="z-source z-shell z-bash">  <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Time</span></span><span class="z-meta z-function-call z-arguments z-shell"> (mean ± σ</span><span class="z-meta z-function-call z-shell"></span>)<span class="z-meta z-function-call z-shell"><span class="z-support z-function z-colon z-shell">:</span></span><span class="z-meta z-function-call z-arguments z-shell">      1.338 s ±  0.202 s    <span class="z-keyword z-control z-regexp z-set z-begin z-shell">[</span>User: 0.002 s, System: 0.027 s<span class="z-keyword z-control z-regexp z-set z-end z-shell">]</span></span>
+</span><span class="z-source z-shell z-bash">  <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Range</span></span><span class="z-meta z-function-call z-arguments z-shell"> (min … max</span><span class="z-meta z-function-call z-shell"></span>)<span class="z-meta z-function-call z-shell"><span class="z-support z-function z-colon z-shell">:</span></span><span class="z-meta z-function-call z-arguments z-shell">    1.136 s …  1.768 s    10 runs</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash">  <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Warning:</span></span><span class="z-meta z-function-call z-arguments z-shell"> Ignoring non-zero exit code.</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Benchmark</span></span><span class="z-meta z-function-call z-arguments z-shell"> 2: prove<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>rvj8</span> ../tests <span class="z-keyword z-operator z-assignment z-redirection z-shell">&gt;</span>/dev/null</span>
+</span><span class="z-source z-shell z-bash">  <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Time</span></span><span class="z-meta z-function-call z-arguments z-shell"> (mean ± σ</span><span class="z-meta z-function-call z-shell"></span>)<span class="z-meta z-function-call z-shell"><span class="z-support z-function z-colon z-shell">:</span></span><span class="z-meta z-function-call z-arguments z-shell">     138.946 s ±  2.419 s    <span class="z-keyword z-control z-regexp z-set z-begin z-shell">[</span>User: 2.947 s, System: 9.995 s<span class="z-keyword z-control z-regexp z-set z-end z-shell">]</span></span>
+</span><span class="z-source z-shell z-bash">  <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Range</span></span><span class="z-meta z-function-call z-arguments z-shell"> (min … max</span><span class="z-meta z-function-call z-shell"></span>)<span class="z-meta z-function-call z-shell"><span class="z-support z-function z-colon z-shell">:</span></span><span class="z-meta z-function-call z-arguments z-shell">   136.582 s … 143.314 s    10 runs</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash">  <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Warning:</span></span><span class="z-meta z-function-call z-arguments z-shell"> Ignoring non-zero exit code.</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Summary</span></span>
+</span><span class="z-source z-shell z-bash">  <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell"><span class="z-string z-quoted z-single z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&#39;</span>./target/release/pjdfstest -c pjdfstest.toml &gt;/dev/null<span class="z-punctuation z-definition z-string z-end z-shell">&#39;</span></span></span></span><span class="z-meta z-function-call z-arguments z-shell"> ran</span>
+</span><span class="z-source z-shell z-bash">  <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">103.82</span></span><span class="z-meta z-function-call z-arguments z-shell"> ± 15.81 times faster than <span class="z-string z-quoted z-single z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&#39;</span>prove -rvj8 ../tests &gt;/dev/null<span class="z-punctuation z-definition z-string z-end z-shell">&#39;</span></span></span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">With</span></span><span class="z-meta z-function-call z-arguments z-shell"> 1 second sleeps:</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-keyword z-operator z-assignment z-redirection z-shell">&gt;</span> sudo <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">hyperfine</span></span><span class="z-meta z-function-call z-arguments z-shell"><span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>ir5</span> <span class="z-string z-quoted z-single z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&#39;</span>./target/release/pjdfstest -c pjdfstest.toml &gt;/dev/null<span class="z-punctuation z-definition z-string z-end z-shell">&#39;</span></span> <span class="z-string z-quoted z-single z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&#39;</span>prove -rvj8 ../tests &gt;/dev/null<span class="z-punctuation z-definition z-string z-end z-shell">&#39;</span></span></span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Benchmark</span></span><span class="z-meta z-function-call z-arguments z-shell"> 1: ./target/release/pjdfstest<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>c</span> pjdfstest.toml <span class="z-keyword z-operator z-assignment z-redirection z-shell">&gt;</span>/dev/null</span>
+</span><span class="z-source z-shell z-bash">  <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Time</span></span><span class="z-meta z-function-call z-arguments z-shell"> (mean ± σ</span><span class="z-meta z-function-call z-shell"></span>)<span class="z-meta z-function-call z-shell"><span class="z-support z-function z-colon z-shell">:</span></span><span class="z-meta z-function-call z-arguments z-shell">     88.563 s ±  0.265 s    <span class="z-keyword z-control z-regexp z-set z-begin z-shell">[</span>User: 0.003 s, System: 0.025 s<span class="z-keyword z-control z-regexp z-set z-end z-shell">]</span></span>
+</span><span class="z-source z-shell z-bash">  <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Range</span></span><span class="z-meta z-function-call z-arguments z-shell"> (min … max</span><span class="z-meta z-function-call z-shell"></span>)<span class="z-meta z-function-call z-shell"><span class="z-support z-function z-colon z-shell">:</span></span><span class="z-meta z-function-call z-arguments z-shell">   88.322 s … 88.946 s    5 runs</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash">  <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Warning:</span></span><span class="z-meta z-function-call z-arguments z-shell"> Ignoring non-zero exit code.</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Benchmark</span></span><span class="z-meta z-function-call z-arguments z-shell"> 2: prove<span class="z-variable z-parameter z-option z-shell"><span class="z-punctuation z-definition z-parameter z-shell"> -</span>rvj8</span> ../tests <span class="z-keyword z-operator z-assignment z-redirection z-shell">&gt;</span>/dev/null</span>
+</span><span class="z-source z-shell z-bash">  <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Time</span></span><span class="z-meta z-function-call z-arguments z-shell"> (mean ± σ</span><span class="z-meta z-function-call z-shell"></span>)<span class="z-meta z-function-call z-shell"><span class="z-support z-function z-colon z-shell">:</span></span><span class="z-meta z-function-call z-arguments z-shell">     138.636 s ±  2.822 s    <span class="z-keyword z-control z-regexp z-set z-begin z-shell">[</span>User: 2.779 s, System: 9.532 s<span class="z-keyword z-control z-regexp z-set z-end z-shell">]</span></span>
+</span><span class="z-source z-shell z-bash">  <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Range</span></span><span class="z-meta z-function-call z-arguments z-shell"> (min … max</span><span class="z-meta z-function-call z-shell"></span>)<span class="z-meta z-function-call z-shell"><span class="z-support z-function z-colon z-shell">:</span></span><span class="z-meta z-function-call z-arguments z-shell">   136.659 s … 143.455 s    5 runs</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash">  <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Warning:</span></span><span class="z-meta z-function-call z-arguments z-shell"> Ignoring non-zero exit code.</span>
+</span><span class="z-source z-shell z-bash">
+</span><span class="z-source z-shell z-bash"><span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">Summary</span></span>
+</span><span class="z-source z-shell z-bash">  <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell"><span class="z-string z-quoted z-single z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&#39;</span>./target/release/pjdfstest -c pjdfstest.toml &gt;/dev/null<span class="z-punctuation z-definition z-string z-end z-shell">&#39;</span></span></span></span><span class="z-meta z-function-call z-arguments z-shell"> ran</span>
+</span><span class="z-source z-shell z-bash">    <span class="z-meta z-function-call z-shell"><span class="z-variable z-function z-shell">1.57</span></span><span class="z-meta z-function-call z-arguments z-shell"> ± 0.03 times faster than <span class="z-string z-quoted z-single z-shell"><span class="z-punctuation z-definition z-string z-begin z-shell">&#39;</span>prove -rvj8 ../tests &gt;/dev/null<span class="z-punctuation z-definition z-string z-end z-shell">&#39;</span></span></span>
+</span><span class="z-source z-shell z-bash">
+</span></code></pre>
+
+        </article>
+    </main>
+    <aside  class="blur" > 
+        <nav>
+            <ul>
+                <li>
+                    <a class="toc-h2" href="#thanks">Thanks</a>
+                </li>
+                <li>
+                    <a class="toc-h2" href="#code">Code</a>
+                </li>
+                <li>
+                    <a class="toc-h2" href="#what-is-pjdfstest">What is pjdfstest?</a>
+                    <ul>
+                        <li>
+                            <a class="toc-h3" href="#architecture">Architecture</a>
+                        </li>
+                        <li>
+                            <a class="toc-h3" href="#test-case">Test case</a>
+                        </li>
+                        <li>
+                            <a class="toc-h3" href="#execution">Execution</a>
+                        </li>
+                        <li>
+                            <a class="toc-h3" href="#limitations">Limitations</a>
+                        </li>
+                    </ul>
+                </li>
+                <li>
+                    <a class="toc-h2" href="#rewrite-it-in-rust">Rewrite it in Rust</a>
+                    <ul>
+                        <li>
+                            <a class="toc-h3" href="#test-collection">Test collection</a>
+                        </li>
+                        <li>
+                            <a class="toc-h3" href="#writing-tests">Writing tests</a>
+                        </li>
+                    </ul>
+                </li>
+                <li>
+                    <a class="toc-h2" href="#what-s-new">What’s new?</a>
+                    <ul>
+                        <li>
+                            <a class="toc-h3" href="#isolation-1">Isolation</a>
+                        </li>
+                        <li>
+                            <a class="toc-h3" href="#performance-1">Performance</a>
+                        </li>
+                        <li>
+                            <a class="toc-h3" href="#configurability-1">Configurability</a>
+                        </li>
+                        <li>
+                            <a class="toc-h3" href="#debugging-1">Debugging</a>
+                        </li>
+                    </ul>
+                </li>
+                <li>
+                    <a class="toc-h2" href="#progress-status">Progress status</a>
+                </li>
+                <li>
+                    <a class="toc-h2" href="#looking-forward">Looking forward</a>
+                    <ul>
+                        <li>
+                            <a class="toc-h3" href="#atf-support">ATF support</a>
+                        </li>
+                        <li>
+                            <a class="toc-h3" href="#parallelization">Parallelization</a>
+                        </li>
+                        <li>
+                            <a class="toc-h3" href="#command-line-improvements">Command-line improvements</a>
+                        </li>
+                    </ul>
+                </li>
+                <li>
+                    <a class="toc-h2" href="#appendix">Appendix</a>
+                </li>
+            </ul>
+        </nav>
+        <a id="back-to-top" aria-label="back to top" href="#top"><i class="ri-arrow-up-s-line ri-2x"></i></a>
+    </aside>
+</div>
+<footer>
+    <div class="copyright">
+        Copyright © 2022 Sayafdine Said. All rights reserved.
+    </div>
+    <div class="credits">
+        <span>Powered by <a href="https://www.getzola.org/" target="_blank" rel='noreferrer noopener'>Zola</a> and <a href="https://github.com/isunjn/serene" target="_blank" rel='noreferrer noopener'>Serene</a></span>
+    </div>
+</footer>
+<script src="/js/dark.js"></script>  
+<script src="/js/outdate.js"></script> 
+<script src="/js/toc.js"></script>
+<script src="/js/progress.js"></script>
+<script src="/js/lightense.min.js"></script>
+<script src="/js/img.js"></script>
+</body>
+
+</html>
