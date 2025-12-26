@@ -44,7 +44,7 @@ show_resume = true
 links = [
   { name = "GitHub", icon = "ri-github-line", url = "https://github.com/saidsay-so" },
   { name = "LinkedIn", icon = "ri-linkedin-line", url = "https://www.linkedin.com/in/sayafdine-said" },
-  { name = "Email", icon = "ri-mail-send-line", url = "mailto:sayafdine.said@outlook.fr" },
+  { name = "Email", icon = "ri-mail-send-line", url = "mailto:musikid@outlook.fr" },
 ]
 
 #============== Icons ===============================================
